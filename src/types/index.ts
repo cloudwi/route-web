@@ -6,6 +6,8 @@ export interface Place {
   lat: number;
   lng: number;
   category?: string;
+  telephone?: string;
+  naverMapUrl?: string;
 }
 
 // Course types
@@ -15,6 +17,26 @@ export interface Course {
   description?: string;
   places: Place[];
   createdAt: Date;
+  userId?: string;
+  isPublic?: boolean;
+}
+
+// User types
+export interface User {
+  id: string;
+  nickname: string;
+  profileImage?: string;
+  email?: string;
+}
+
+// Popular Place for ranking
+export interface PopularPlace {
+  id: string;
+  name: string;
+  address: string;
+  category: string;
+  count: number;
+  thumbnail?: string;
 }
 
 // Naver Map types

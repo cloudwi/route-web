@@ -16,7 +16,7 @@ interface BackendPlaceResponse {
   telephone: string;
   latitude: number;
   longitude: number;
-  link: string;
+  naver_map_url: string;
 }
 
 export default function PlaceSearch({ onPlaceSelect, onSearchResults }: PlaceSearchProps) {
@@ -43,6 +43,8 @@ export default function PlaceSearch({ onPlaceSelect, onSearchResults }: PlaceSea
         lat: item.latitude,
         lng: item.longitude,
         category: item.category,
+        telephone: item.telephone,
+        naverMapUrl: item.naver_map_url,
       }));
 
       setResults(places);
