@@ -15,6 +15,9 @@ export async function POST(request: NextRequest) {
     const body: DirectionsRequest = await request.json();
     const { start, goal, waypoints, option = "traoptimal" } = body;
 
+    console.log("NAVER_CLIENT_ID:", NAVER_CLIENT_ID ? "설정됨" : "없음");
+    console.log("NAVER_CLIENT_SECRET:", NAVER_CLIENT_SECRET ? "설정됨" : "없음");
+
     if (!NAVER_CLIENT_ID || !NAVER_CLIENT_SECRET) {
       return NextResponse.json(
         { error: "네이버 API 키가 설정되지 않았습니다." },
@@ -26,7 +29,7 @@ export async function POST(request: NextRequest) {
     const startStr = `${start.lng},${start.lat}`;
     const goalStr = `${goal.lng},${goal.lat}`;
 
-    let url = `https://naveropenapi.apigw.ntruss.com/map-direction/v1/driving?start=${startStr}&goal=${goalStr}&option=${option}`;
+    let url = `https://maps.apigw.ntruss.com/map-direction/v1/driving?start=${startStr}&goal=${goalStr}&option=${option}`;
 
     // 경유지가 있으면 추가 (최대 5개)
     if (waypoints && waypoints.length > 0) {
@@ -46,9 +49,12 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
 
+    console.log("Naver Directions API response:", JSON.stringify(data, null, 2));
+
     if (data.code !== 0) {
+      console.error("Naver Directions API error:", data);
       return NextResponse.json(
-        { error: data.message || "경로를 찾을 수 없습니다." },
+        { error: data.message || "경로를 찾을 수 없습니다.", code: data.code },
         { status: 400 }
       );
     }
@@ -68,10 +74,12 @@ export async function POST(request: NextRequest) {
       lng: coord[0],
     }));
 
-    // 구간별 정보
-    const sections = route.section?.map((sec: { distance: number; duration: number }) => ({
+    // 구간별 정보 (duration이 없으면 거리 비율로 추정)
+    const totalDistance = route.summary.distance;
+    const totalDuration = route.summary.duration;
+    const sections = route.section?.map((sec: { distance: number; duration?: number }) => ({
       distance: sec.distance, // 미터
-      duration: sec.duration, // 밀리초
+      duration: sec.duration || Math.round((sec.distance / totalDistance) * totalDuration), // 밀리초
     })) || [];
 
     return NextResponse.json({

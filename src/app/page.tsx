@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Course, PopularPlace } from "@/types";
-import { isLoggedIn, removeToken } from "@/lib/api";
+import { isLoggedIn, removeToken, api } from "@/lib/api";
 import {
   Home as HomeIcon,
   PlusCircle,
@@ -18,6 +19,7 @@ import {
   Camera,
   Music,
   Trash2,
+  Loader2,
 } from "lucide-react";
 
 // 임시 인기 장소 데이터
@@ -42,16 +44,48 @@ const getCategoryIcon = (category: string) => {
   }
 };
 
-export default function Home() {
+function HomeContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loggedIn, setLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState<"home" | "my">("home");
+  const [isLoadingCourses, setIsLoadingCourses] = useState(false);
 
+  // URL 파라미터로 탭 설정
   useEffect(() => {
-    const savedCourses = JSON.parse(localStorage.getItem("courses") || "[]");
-    setCourses(savedCourses);
+    const tab = searchParams.get("tab");
+    if (tab === "my") {
+      setActiveTab("my");
+    }
+  }, [searchParams]);
+
+  // 로그인 상태 확인
+  useEffect(() => {
     setLoggedIn(isLoggedIn());
   }, []);
+
+  // 내 코스 탭이고 로그인 되어있으면 API로 코스 불러오기
+  useEffect(() => {
+    if (activeTab === "my" && loggedIn) {
+      fetchCourses();
+    }
+  }, [activeTab, loggedIn]);
+
+  const fetchCourses = async () => {
+    setIsLoadingCourses(true);
+    try {
+      const response = await api.fetch("/api/v1/courses");
+      if (response.ok) {
+        const data = await response.json();
+        setCourses(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch courses:", error);
+    } finally {
+      setIsLoadingCourses(false);
+    }
+  };
 
   const handleKakaoLogin = () => {
     window.location.href = "http://localhost:3000/auth/kakao";
@@ -62,11 +96,23 @@ export default function Home() {
     setLoggedIn(false);
   };
 
-  const handleDeleteCourse = (courseId: string) => {
+  const handleDeleteCourse = async (courseId: string) => {
     if (!confirm("정말 삭제하시겠습니까?")) return;
-    const updatedCourses = courses.filter((c) => c.id !== courseId);
-    localStorage.setItem("courses", JSON.stringify(updatedCourses));
-    setCourses(updatedCourses);
+
+    try {
+      const response = await api.fetch(`/api/v1/courses/${courseId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setCourses(courses.filter((c) => c.id !== courseId));
+      } else {
+        alert("코스 삭제에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("Failed to delete course:", error);
+      alert("코스 삭제에 실패했습니다.");
+    }
   };
 
   return (
@@ -108,20 +154,20 @@ export default function Home() {
         <div className="max-w-lg mx-auto px-4 flex">
           <button
             onClick={() => setActiveTab("home")}
-            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-all ${
               activeTab === "home"
                 ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
             }`}
           >
             홈
           </button>
           <button
             onClick={() => setActiveTab("my")}
-            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-all ${
               activeTab === "my"
                 ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
             }`}
           >
             내 코스
@@ -167,7 +213,7 @@ export default function Home() {
                   <TrendingUp className="w-5 h-5 text-orange-500" />
                   <h3 className="font-bold text-gray-900">인기 장소 TOP 5</h3>
                 </div>
-                <button className="text-sm text-gray-500 flex items-center gap-1">
+                <button className="text-sm text-gray-500 flex items-center gap-1 hover:text-blue-600 transition-colors">
                   더보기 <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -175,7 +221,7 @@ export default function Home() {
                 {MOCK_POPULAR_PLACES.map((place, index) => (
                   <div
                     key={place.id}
-                    className="flex items-center gap-4 p-4 border-b border-gray-50 last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer"
+                    className="flex items-center gap-4 p-4 border-b border-gray-50 last:border-b-0 hover:bg-blue-50 hover:scale-[1.01] transition-all cursor-pointer"
                   >
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
@@ -247,9 +293,9 @@ export default function Home() {
                 ].map((course, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    className="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer"
                   >
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center shadow-md">
                       <MapPin className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1">
@@ -290,6 +336,11 @@ export default function Home() {
                   카카오로 시작하기
                 </button>
               </div>
+            ) : isLoadingCourses ? (
+              <div className="text-center py-12">
+                <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
+                <p className="text-gray-500">코스를 불러오는 중...</p>
+              </div>
             ) : courses.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -327,15 +378,19 @@ export default function Home() {
                 {courses.map((course) => (
                   <div
                     key={course.id}
-                    className="bg-white rounded-2xl shadow-sm p-5 hover:shadow-md transition-shadow"
+                    onClick={() => router.push(`/course/${course.id}`)}
+                    className="bg-white rounded-2xl shadow-sm p-5 hover:shadow-lg hover:scale-[1.01] transition-all cursor-pointer"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="font-semibold text-gray-900 text-lg">
                         {course.name}
                       </h3>
                       <button
-                        onClick={() => handleDeleteCourse(course.id)}
-                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteCourse(course.id);
+                        }}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
@@ -343,7 +398,7 @@ export default function Home() {
                     <div className="space-y-2">
                       {course.places.slice(0, 3).map((place, index) => (
                         <div key={place.id} className="flex items-center gap-3">
-                          <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                          <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-sm">
                             {index + 1}
                           </div>
                           <span className="text-gray-600 text-sm truncate">
@@ -361,9 +416,9 @@ export default function Home() {
                       <span className="text-xs text-gray-400">
                         {course.places.length}개 장소
                       </span>
-                      <button className="text-sm text-blue-600 font-medium">
-                        코스 보기
-                      </button>
+                      <span className="text-sm text-blue-600 font-medium">
+                        지도에서 보기 →
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -378,8 +433,8 @@ export default function Home() {
         <div className="max-w-lg mx-auto px-6 py-2 flex justify-around safe-area-bottom">
           <button
             onClick={() => setActiveTab("home")}
-            className={`flex flex-col items-center py-2 px-4 transition-colors ${
-              activeTab === "home" ? "text-blue-600" : "text-gray-400"
+            className={`flex flex-col items-center py-2 px-4 rounded-xl transition-all ${
+              activeTab === "home" ? "text-blue-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
             }`}
           >
             <HomeIcon className="w-6 h-6 mb-1" />
@@ -388,7 +443,7 @@ export default function Home() {
           {loggedIn ? (
             <Link
               href="/course/create"
-              className="flex flex-col items-center py-2 px-4 text-gray-400 hover:text-blue-600 transition-colors"
+              className="flex flex-col items-center py-2 px-4 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
             >
               <PlusCircle className="w-6 h-6 mb-1" />
               <span className="text-xs">코스만들기</span>
@@ -396,7 +451,7 @@ export default function Home() {
           ) : (
             <button
               onClick={handleKakaoLogin}
-              className="flex flex-col items-center py-2 px-4 text-gray-400 hover:text-blue-600 transition-colors"
+              className="flex flex-col items-center py-2 px-4 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
             >
               <PlusCircle className="w-6 h-6 mb-1" />
               <span className="text-xs">코스만들기</span>
@@ -404,8 +459,8 @@ export default function Home() {
           )}
           <button
             onClick={() => setActiveTab("my")}
-            className={`flex flex-col items-center py-2 px-4 transition-colors ${
-              activeTab === "my" ? "text-blue-600" : "text-gray-400"
+            className={`flex flex-col items-center py-2 px-4 rounded-xl transition-all ${
+              activeTab === "my" ? "text-blue-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
             }`}
           >
             <UserIcon className="w-6 h-6 mb-1" />
@@ -414,5 +469,19 @@ export default function Home() {
         </div>
       </nav>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+        </div>
+      }
+    >
+      <HomeContent />
+    </Suspense>
   );
 }

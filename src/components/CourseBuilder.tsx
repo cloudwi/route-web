@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Place, Course } from "@/types";
+import { useRouter } from "next/navigation";
+import { Place } from "@/types";
+import { api } from "@/lib/api";
 import PlaceSearch from "./PlaceSearch";
-import NaverMap, { RouteInfo } from "./NaverMap";
+import NaverMap, { RouteInfo, RouteSection } from "./NaverMap";
+import Toast, { ToastType } from "./Toast";
 import {
   ChevronUp,
   ChevronDown,
@@ -20,6 +23,7 @@ import {
 
 // 거리 포맷팅 (미터 -> km)
 const formatDistance = (meters: number): string => {
+  if (!meters || isNaN(meters)) return "-";
   if (meters < 1000) {
     return `${meters}m`;
   }
@@ -28,6 +32,7 @@ const formatDistance = (meters: number): string => {
 
 // 시간 포맷팅 (밀리초 -> 분/시간)
 const formatDuration = (ms: number): string => {
+  if (!ms || isNaN(ms)) return "-";
   const minutes = Math.round(ms / 1000 / 60);
   if (minutes < 60) {
     return `${minutes}분`;
@@ -38,12 +43,26 @@ const formatDuration = (ms: number): string => {
 };
 
 export default function CourseBuilder() {
+  const router = useRouter();
   const [places, setPlaces] = useState<Place[]>([]);
   const [searchResults, setSearchResults] = useState<Place[]>([]);
   const [courseName, setCourseName] = useState("");
   const [selectedPlaceId, setSelectedPlaceId] = useState<string>();
   const [mobileView, setMobileView] = useState<"map" | "list">("map");
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: ToastType; isVisible: boolean }>({
+    message: "",
+    type: "success",
+    isVisible: false,
+  });
+
+  const showToast = (message: string, type: ToastType) => {
+    setToast({ message, type, isVisible: true });
+  };
+
+  const hideToast = () => {
+    setToast((prev) => ({ ...prev, isVisible: false }));
+  };
 
   const handleSearchResults = (results: Place[]) => {
     setSearchResults(results);
@@ -51,7 +70,7 @@ export default function CourseBuilder() {
 
   const handleAddPlace = (place: Place) => {
     if (places.some((p) => p.id === place.id)) {
-      alert("이미 추가된 장소입니다.");
+      showToast("이미 추가된 장소입니다.", "warning");
       return;
     }
     setPlaces([...places, place]);
@@ -65,30 +84,44 @@ export default function CourseBuilder() {
     }
   };
 
-  const handleSaveCourse = () => {
+  const handleSaveCourse = async () => {
     if (!courseName.trim()) {
-      alert("코스 이름을 입력해주세요.");
+      showToast("코스 이름을 입력해주세요.", "warning");
       return;
     }
 
     if (places.length < 1) {
-      alert("최소 1개 이상의 장소를 추가해주세요.");
+      showToast("최소 1개 이상의 장소를 추가해주세요.", "warning");
       return;
     }
 
-    const course: Course = {
-      id: Date.now().toString(),
-      name: courseName,
-      places,
-      createdAt: new Date(),
-    };
+    showToast("코스를 저장하고 있습니다...", "loading");
 
-    const savedCourses = JSON.parse(localStorage.getItem("courses") || "[]");
-    localStorage.setItem("courses", JSON.stringify([...savedCourses, course]));
+    try {
+      const response = await api.fetch("/api/v1/courses", {
+        method: "POST",
+        body: JSON.stringify({
+          name: courseName,
+          places,
+        }),
+      });
 
-    alert("코스가 저장되었습니다!");
-    setCourseName("");
-    setPlaces([]);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || "코스 저장에 실패했습니다.";
+        throw new Error(errorMessage);
+      }
+
+      showToast("코스가 저장되었습니다!", "success");
+
+      setTimeout(() => {
+        router.push("/?tab=my");
+      }, 1500);
+    } catch (error) {
+      console.error("Failed to save course:", error);
+      const message = error instanceof Error ? error.message : "코스 저장에 실패했습니다.";
+      showToast(message, "error");
+    }
   };
 
   const movePlace = (index: number, direction: "up" | "down") => {
@@ -109,73 +142,101 @@ export default function CourseBuilder() {
     places.find((p) => p.id === selectedPlaceId) ||
     searchResults.find((p) => p.id === selectedPlaceId);
 
+  // 구간별 이동 정보 컴포넌트
+  const SectionInfo = ({ section }: { section: RouteSection }) => (
+    <div className="flex items-center justify-center py-2">
+      <div className="flex items-center gap-3 px-3 py-1.5 bg-gray-50 rounded-lg text-xs text-gray-500">
+        <div className="flex items-center gap-1">
+          <Navigation className="w-3 h-3" />
+          <span>{formatDistance(section.distance)}</span>
+        </div>
+        <div className="w-px h-3 bg-gray-300" />
+        <div className="flex items-center gap-1">
+          <Clock className="w-3 h-3" />
+          <span>{formatDuration(section.duration)}</span>
+        </div>
+      </div>
+    </div>
+  );
+
   // 장소 목록 컴포넌트 (재사용)
   const PlaceList = () => (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {places.map((place, index) => (
-        <div
-          key={place.id}
-          className={`bg-white border rounded-xl p-4 transition-all cursor-pointer ${
-            selectedPlaceId === place.id
-              ? "border-blue-500 shadow-md"
-              : "border-gray-200 hover:border-gray-300"
-          }`}
-          onClick={() => {
-            setSelectedPlaceId(place.id);
-            setMobileView("map");
-          }}
-        >
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
-              {index + 1}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-gray-900 truncate">
-                {place.name}
-              </h4>
-              <p className="text-sm text-gray-500 truncate">
-                {place.address}
-              </p>
-              {place.category && (
-                <span className="inline-block mt-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
-                  {place.category}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-col gap-1">
-              {index > 0 && (
+        <div key={place.id}>
+          <div
+            className={`bg-white border rounded-xl p-4 transition-all cursor-pointer ${
+              selectedPlaceId === place.id
+                ? "border-blue-500 shadow-md"
+                : "border-gray-200 hover:border-gray-300"
+            }`}
+            onClick={() => {
+              setSelectedPlaceId(place.id);
+              setMobileView("map");
+            }}
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
+                {index + 1}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-medium text-gray-900 truncate">
+                  {place.name}
+                </h4>
+                <p className="text-sm text-gray-500 truncate">
+                  {place.address}
+                </p>
+                {place.category && (
+                  <span className="inline-block mt-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                    {place.category}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-1">
+                {index > 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      movePlace(index, "up");
+                    }}
+                    className="p-1 hover:bg-gray-100 rounded"
+                  >
+                    <ChevronUp className="w-4 h-4" />
+                  </button>
+                )}
+                {index < places.length - 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      movePlace(index, "down");
+                    }}
+                    className="p-1 hover:bg-gray-100 rounded"
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    movePlace(index, "up");
+                    handleRemovePlace(place.id);
                   }}
-                  className="p-1 hover:bg-gray-100 rounded"
+                  className="p-1 hover:bg-red-100 text-red-500 rounded"
                 >
-                  <ChevronUp className="w-4 h-4" />
+                  <X className="w-4 h-4" />
                 </button>
-              )}
-              {index < places.length - 1 && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    movePlace(index, "down");
-                  }}
-                  className="p-1 hover:bg-gray-100 rounded"
-                >
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-              )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRemovePlace(place.id);
-                }}
-                className="p-1 hover:bg-red-100 text-red-500 rounded"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              </div>
             </div>
           </div>
+          {/* 구간별 이동 시간 표시 */}
+          {index < places.length - 1 && routeInfo && (
+            <SectionInfo
+              section={
+                places.length === 2
+                  ? { distance: routeInfo.distance, duration: routeInfo.duration }
+                  : routeInfo.sections?.[index] || { distance: 0, duration: 0 }
+              }
+            />
+          )}
         </div>
       ))}
     </div>
@@ -183,20 +244,25 @@ export default function CourseBuilder() {
 
   return (
     <div className="flex flex-col h-screen bg-white">
+      {/* Toast */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+      />
+
       {/* Header */}
-      <header className="bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between z-20">
-        <h1 className="text-xl font-bold">코스 만들기</h1>
-        <button
-          onClick={handleSaveCourse}
-          disabled={places.length < 1}
-          className={`px-5 py-2.5 text-sm font-semibold rounded-xl transition-all ${
-            places.length >= 1
-              ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md hover:shadow-lg hover:from-blue-600 hover:to-blue-700"
-              : "bg-gray-200 text-gray-400 cursor-not-allowed"
-          }`}
-        >
-          코스 저장
-        </button>
+      <header className="bg-white border-b border-gray-100 px-4 py-3 z-20 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <MapPin className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            RouteK
+          </span>
+        </div>
+        <span className="text-sm text-gray-500">코스 만들기</span>
       </header>
 
       {/* Main Content - Desktop */}
@@ -350,7 +416,7 @@ export default function CourseBuilder() {
         </div>
 
         {/* Route Info Badge - Mobile */}
-        {routeInfo && places.length >= 2 && (
+        {places.length >= 2 && routeInfo && (
           <div className="absolute top-4 left-4 right-4 z-10">
             <div className="bg-white rounded-xl shadow-lg p-3 flex items-center justify-around">
               <div className="flex items-center gap-2 text-blue-600">
