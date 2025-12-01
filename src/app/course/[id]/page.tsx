@@ -27,26 +27,27 @@ export default function CourseDetailPage({
       router.replace("/");
       return;
     }
-    fetchCourse();
-  }, [id, router]);
 
-  const fetchCourse = async () => {
-    setIsLoading(true);
-    try {
-      const response = await api.fetch(`/api/v1/courses/${id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setCourse(data);
-      } else {
+    const loadCourse = async () => {
+      setIsLoading(true);
+      try {
+        const response = await api.fetch(`/api/v1/courses/${id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setCourse(data);
+        } else {
+          router.push("/?tab=my");
+        }
+      } catch (error) {
+        console.error("Failed to fetch course:", error);
         router.push("/?tab=my");
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Failed to fetch course:", error);
-      router.push("/?tab=my");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
+
+    loadCourse();
+  }, [id, router]);
 
   const handleDelete = async () => {
     if (!confirm("정말 삭제하시겠습니까?")) return;

@@ -22,18 +22,6 @@ import {
 } from "lucide-react";
 import LoginModal from "@/components/LoginModal";
 
-const getCategoryIcon = (category: string) => {
-  switch (category) {
-    case "카페":
-      return <Coffee className="w-4 h-4" />;
-    case "맛집":
-      return <Utensils className="w-4 h-4" />;
-    case "핫플":
-      return <Camera className="w-4 h-4" />;
-    default:
-      return <MapPin className="w-4 h-4" />;
-  }
-};
 
 function HomeContent() {
   const searchParams = useSearchParams();

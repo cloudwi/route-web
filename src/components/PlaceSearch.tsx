@@ -32,6 +32,7 @@ export default function PlaceSearch({ onPlaceSelect, onSearchResults, initialSea
       hasInitialSearched.current = true;
       performSearch(initialSearch);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSearch]);
 
   const performSearch = async (searchQuery: string) => {

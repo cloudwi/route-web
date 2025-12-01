@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { isLoggedIn } from "@/lib/api";
 import CourseBuilder from "@/components/CourseBuilder";
@@ -9,19 +9,18 @@ import { Loader2 } from "lucide-react";
 function CreateCourseContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isChecking, setIsChecking] = useState(true);
 
   const initialSearch = searchParams.get("search") || "";
 
-  useEffect(() => {
-    if (!isLoggedIn()) {
+  const isAuthenticated = useMemo(() => {
+    const loggedIn = isLoggedIn();
+    if (!loggedIn) {
       router.replace("/");
-    } else {
-      setIsChecking(false);
     }
+    return loggedIn;
   }, [router]);
 
-  if (isChecking) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />

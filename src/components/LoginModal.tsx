@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { X, MapPin } from "lucide-react";
 
 interface LoginModalProps {
@@ -12,26 +12,29 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
 
+  const handleAnimationEnd = useCallback(() => {
+    if (isAnimatingOut) {
+      setShouldRender(false);
+      setIsAnimatingOut(false);
+    }
+  }, [isAnimatingOut]);
+
+  // 애니메이션 상태 관리를 위한 의도적인 setState - shouldRender는 isOpen prop과 동기화 필요
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isOpen) {
       setShouldRender(true);
       setIsAnimatingOut(false);
-      // 스크롤 방지
       document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "";
+      };
     } else if (shouldRender) {
       setIsAnimatingOut(true);
-      const timer = setTimeout(() => {
-        setShouldRender(false);
-        setIsAnimatingOut(false);
-        document.body.style.overflow = "";
-      }, 200);
-      return () => clearTimeout(timer);
-    }
-
-    return () => {
       document.body.style.overflow = "";
-    };
+    }
   }, [isOpen, shouldRender]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleKakaoLogin = () => {
     window.location.href = "http://localhost:3000/auth/kakao";
@@ -51,6 +54,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         isAnimatingOut ? "animate-fade-out" : "animate-fade-in"
       }`}
       onClick={handleBackdropClick}
+      onAnimationEnd={handleAnimationEnd}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50" />
