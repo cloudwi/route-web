@@ -57,13 +57,45 @@ export interface NaverMapProps {
 // Directions API types
 export type DirectionsMode = "transit" | "driving";
 
+// 대중교통 sub_path의 lane 정보
+export interface TransitLane {
+  name?: string;
+  subway_code?: number;
+  bus_no?: string;
+  type?: number;
+  bus_id?: number;
+}
+
+// 대중교통 sub_path (구간 정보)
+export interface TransitSubPath {
+  traffic_type: number; // 1: 지하철, 2: 버스, 3: 도보
+  distance: number;
+  section_time: number;
+  station_count?: number;
+  lane?: TransitLane[];
+  start_name?: string;
+  start_x?: number;
+  start_y?: number;
+  end_name?: string;
+  end_x?: number;
+  end_y?: number;
+  way?: string;
+  way_code?: number;
+}
+
 export interface TransitPath {
   path_type: number;
   total_time: number;
   total_distance: number;
   total_walk: number;
+  total_walk_time?: number;
   transfer_count: number;
+  bus_transit_count?: number;
+  subway_transit_count?: number;
   payment: number;
+  first_start_station?: string;
+  last_end_station?: string;
+  sub_paths?: TransitSubPath[];
 }
 
 export interface DrivingSummary {

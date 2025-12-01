@@ -456,6 +456,7 @@ export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps
               places={places}
               selectedPlaceId={selectedPlaceId}
               onPlaceClick={(place) => setSelectedPlaceId(place.id)}
+              routeSections={routeSections}
             />
           </div>
 
@@ -534,6 +535,7 @@ export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps
             places={places}
             selectedPlaceId={selectedPlaceId}
             onPlaceClick={(place) => setSelectedPlaceId(place.id)}
+            routeSections={routeSections}
           />
         </div>
 

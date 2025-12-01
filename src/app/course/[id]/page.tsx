@@ -201,6 +201,7 @@ export default function CourseDetailPage({
             places={course.places}
             selectedPlaceId={selectedPlaceId}
             onPlaceClick={(place) => setSelectedPlaceId(place.id)}
+            routeSections={routeSections}
           />
         </div>
 
