@@ -4,36 +4,12 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { api, isLoggedIn } from "@/lib/api";
 import { Course } from "@/types";
-import NaverMap, { RouteInfo } from "@/components/NaverMap";
+import NaverMap from "@/components/NaverMap";
 import {
   ArrowLeft,
-  MapPin,
-  Clock,
-  Navigation,
   Trash2,
   Loader2,
 } from "lucide-react";
-
-// 거리 포맷팅 (미터 -> km)
-const formatDistance = (meters: number): string => {
-  if (!meters || isNaN(meters)) return "-";
-  if (meters < 1000) {
-    return `${meters}m`;
-  }
-  return `${(meters / 1000).toFixed(1)}km`;
-};
-
-// 시간 포맷팅 (밀리초 -> 분/시간)
-const formatDuration = (ms: number): string => {
-  if (!ms || isNaN(ms)) return "-";
-  const minutes = Math.round(ms / 1000 / 60);
-  if (minutes < 60) {
-    return `${minutes}분`;
-  }
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  return remainingMinutes > 0 ? `${hours}시간 ${remainingMinutes}분` : `${hours}시간`;
-};
 
 export default function CourseDetailPage({
   params,
@@ -44,7 +20,6 @@ export default function CourseDetailPage({
   const router = useRouter();
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string>();
 
   useEffect(() => {
@@ -135,29 +110,7 @@ export default function CourseDetailPage({
             places={course.places}
             selectedPlaceId={selectedPlaceId}
             onPlaceClick={(place) => setSelectedPlaceId(place.id)}
-            onRouteCalculated={setRouteInfo}
           />
-
-          {/* Route Info Overlay */}
-          {routeInfo && (
-            <div className="absolute top-4 left-4 right-4 lg:left-4 lg:right-auto z-10">
-              <div className="bg-white rounded-xl shadow-lg p-3 flex items-center gap-4">
-                <div className="flex items-center gap-2 text-blue-600">
-                  <Navigation className="w-4 h-4" />
-                  <span className="font-semibold text-sm">
-                    {formatDistance(routeInfo.distance)}
-                  </span>
-                </div>
-                <div className="w-px h-5 bg-gray-200" />
-                <div className="flex items-center gap-2 text-blue-600">
-                  <Clock className="w-4 h-4" />
-                  <span className="font-semibold text-sm">
-                    {formatDuration(routeInfo.duration)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Place List - Desktop */}

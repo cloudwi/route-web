@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef } from "react";
 import { useNaverMap } from "@/hooks/useNaverMap";
 import { Place } from "@/types";
 
@@ -8,77 +8,52 @@ interface NaverMapProps {
   places: Place[];
   onPlaceClick?: (place: Place) => void;
   selectedPlaceId?: string;
-  onRouteCalculated?: (route: RouteInfo | null) => void;
 }
-
-export interface RouteSection {
-  distance: number; // 미터
-  duration: number; // 밀리초
-}
-
-export interface RouteInfo {
-  distance: number; // 미터
-  duration: number; // 밀리초
-  path: { lat: number; lng: number }[];
-  sections?: RouteSection[]; // 구간별 정보
-}
-
-// places 배열을 캐시 키로 변환
-const getPlacesCacheKey = (places: Place[]): string => {
-  return places.map((p) => `${p.id}-${p.lat}-${p.lng}`).join("|");
-};
 
 export default function NaverMap({
   places,
   onPlaceClick,
   selectedPlaceId,
-  onRouteCalculated,
 }: NaverMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<naver.maps.Map | null>(null);
   const markersRef = useRef<naver.maps.Marker[]>([]);
   const polylineRef = useRef<naver.maps.Polyline | null>(null);
-  const routeCacheRef = useRef<{ key: string; path: { lat: number; lng: number }[] | null }>({ key: "", path: null });
-  const onRouteCalculatedRef = useRef(onRouteCalculated);
   const onPlaceClickRef = useRef(onPlaceClick);
   const { isLoaded, naver } = useNaverMap();
-
-  // ref 업데이트 (useEffect 내에서 수행)
-  useEffect(() => {
-    onRouteCalculatedRef.current = onRouteCalculated;
-  }, [onRouteCalculated]);
 
   useEffect(() => {
     onPlaceClickRef.current = onPlaceClick;
   }, [onPlaceClick]);
 
-  // places 캐시 키 메모이제이션
-  const placesCacheKey = useMemo(() => getPlacesCacheKey(places), [places]);
-
+  // 지도 초기화 (한 번만 실행)
   useEffect(() => {
-    if (!isLoaded || !naver || !mapRef.current) return;
+    if (!isLoaded || !naver || !mapRef.current || mapInstanceRef.current) return;
 
-    const center =
-      places.length > 0
-        ? new naver.maps.LatLng(places[0].lat, places[0].lng)
-        : new naver.maps.LatLng(37.5665, 126.978);
+    const defaultCenter = new naver.maps.LatLng(37.5665, 126.978);
 
     mapInstanceRef.current = new naver.maps.Map(mapRef.current, {
-      center,
+      center: defaultCenter,
       zoom: 15,
       logoControl: false,
       scaleControl: false,
       mapDataControl: false,
     });
-  }, [isLoaded, naver, places]);
+  }, [isLoaded, naver]);
 
-  // 마커 업데이트 (selectedPlaceId 변경 시에도 실행, 하지만 API 호출 안함)
+  // 마커 및 경로 업데이트
   useEffect(() => {
     if (!mapInstanceRef.current || !naver) return;
 
     // 기존 마커 제거
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = [];
+
+    // 기존 폴리라인 제거
+    if (polylineRef.current) {
+      polylineRef.current.setMap(null);
+      polylineRef.current = null;
+    }
 
     // 마커 생성
     places.forEach((place, index) => {
@@ -130,103 +105,9 @@ export default function NaverMap({
 
       markersRef.current.push(marker);
     });
-  }, [places, naver, selectedPlaceId]);
 
-  // 경로 API 호출 (places가 변경될 때만, 캐시 활용)
-  useEffect(() => {
-    if (!mapInstanceRef.current || !naver) return;
-
-    // 기존 폴리라인 제거
-    if (polylineRef.current) {
-      polylineRef.current.setMap(null);
-      polylineRef.current = null;
-    }
-
-    if (places.length < 2) {
-      onRouteCalculatedRef.current?.(null);
-      return;
-    }
-
-    // 캐시 확인 - 같은 places면 API 호출 안함
-    if (routeCacheRef.current.key === placesCacheKey) {
-      const cachedPath = routeCacheRef.current.path;
-      if (cachedPath && cachedPath.length > 0) {
-        const path = cachedPath.map(
-          (coord) => new naver.maps.LatLng(coord.lat, coord.lng)
-        );
-        polylineRef.current = new naver.maps.Polyline({
-          map: mapInstanceRef.current,
-          path: path,
-          strokeColor: "#3b82f6",
-          strokeWeight: 5,
-          strokeOpacity: 0.9,
-          strokeStyle: "solid",
-          strokeLineCap: "round",
-          strokeLineJoin: "round",
-        });
-      }
-      return;
-    }
-
-    // API 호출
-    const fetchAndDrawRoute = async () => {
-      try {
-        const start = { lat: places[0].lat, lng: places[0].lng };
-        const goal = { lat: places[places.length - 1].lat, lng: places[places.length - 1].lng };
-        const waypoints = places.length > 2
-          ? places.slice(1, -1).map((p) => ({ lat: p.lat, lng: p.lng }))
-          : undefined;
-
-        const response = await fetch("/api/directions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ start, goal, waypoints }),
-        });
-
-        if (!response.ok) {
-          console.warn("Directions API failed, using straight lines");
-          routeCacheRef.current = { key: placesCacheKey, path: null };
-          drawFallbackRoute();
-          return;
-        }
-
-        const data = await response.json();
-
-        // 캐시 저장
-        routeCacheRef.current = { key: placesCacheKey, path: data.path };
-
-        onRouteCalculatedRef.current?.({
-          distance: data.summary.distance,
-          duration: data.summary.duration,
-          path: data.path,
-          sections: data.sections,
-        });
-
-        // 폴리라인 그리기
-        if (data.path && data.path.length > 0) {
-          const path = data.path.map(
-            (coord: { lat: number; lng: number }) => new naver.maps.LatLng(coord.lat, coord.lng)
-          );
-
-          polylineRef.current = new naver.maps.Polyline({
-            map: mapInstanceRef.current,
-            path: path,
-            strokeColor: "#3b82f6",
-            strokeWeight: 5,
-            strokeOpacity: 0.9,
-            strokeStyle: "solid",
-            strokeLineCap: "round",
-            strokeLineJoin: "round",
-          });
-        }
-      } catch (error) {
-        console.warn("Failed to fetch directions:", error);
-        routeCacheRef.current = { key: placesCacheKey, path: null };
-        drawFallbackRoute();
-      }
-    };
-
-    const drawFallbackRoute = () => {
+    // 경로 폴리라인 그리기 (2개 이상 장소가 있을 때)
+    if (places.length >= 2) {
       const path = places.map(
         (place) => new naver.maps.LatLng(place.lat, place.lng)
       );
@@ -236,16 +117,14 @@ export default function NaverMap({
         path: path,
         strokeColor: "#3b82f6",
         strokeWeight: 4,
-        strokeOpacity: 0.6,
+        strokeOpacity: 0.7,
         strokeStyle: "shortdash",
         strokeLineCap: "round",
         strokeLineJoin: "round",
       });
-    };
+    }
 
-    fetchAndDrawRoute();
-
-    // 지도 범위 조정
+    // 장소가 있으면 지도 범위 조정
     if (places.length > 0) {
       const bounds = new naver.maps.LatLngBounds(
         new naver.maps.LatLng(places[0].lat, places[0].lng),
@@ -263,7 +142,7 @@ export default function NaverMap({
         left: 50,
       });
     }
-  }, [placesCacheKey, naver, places]);
+  }, [places, naver, selectedPlaceId]);
 
   if (!isLoaded) {
     return (

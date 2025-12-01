@@ -31,12 +31,20 @@ export interface User {
 
 // Popular Place for ranking
 export interface PopularPlace {
-  id: string;
+  id: number;
+  naverPlaceId: string;
   name: string;
   address: string;
-  category: string;
-  count: number;
-  thumbnail?: string;
+  roadAddress?: string | null;
+  lat: number;
+  lng: number;
+  category?: string;
+  telephone?: string;
+  naverMapUrl?: string;
+  viewsCount: number;
+  likesCount: number;
+  popularityScore: number;
+  createdAt: string;
 }
 
 // Naver Map types

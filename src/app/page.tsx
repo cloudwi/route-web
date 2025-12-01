@@ -12,7 +12,6 @@ import {
   MapPin,
   Heart,
   TrendingUp,
-  ChevronRight,
   Star,
   Coffee,
   Utensils,
@@ -67,7 +66,7 @@ function HomeContent() {
       const response = await api.fetch("/api/v1/popular_places");
       if (response.ok) {
         const data = await response.json();
-        setPopularPlaces(data);
+        setPopularPlaces(data.places || []);
       }
     } catch (error) {
       console.error("Failed to fetch popular places:", error);
@@ -226,14 +225,9 @@ function HomeContent() {
 
             {/* Popular Places Ranking */}
             <section className="mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-orange-500" />
-                  <h3 className="font-bold text-gray-900">인기 장소 TOP 5</h3>
-                </div>
-                <button className="text-sm text-gray-500 flex items-center gap-1 hover:text-blue-600 transition-colors">
-                  더보기 <ChevronRight className="w-4 h-4" />
-                </button>
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="w-5 h-5 text-orange-500" />
+                <h3 className="font-bold text-gray-900">인기 장소 TOP 5</h3>
               </div>
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 {isLoadingPopularPlaces ? (
@@ -272,11 +266,11 @@ function HomeContent() {
                       </div>
                       <div className="flex items-center gap-1 text-sm text-gray-500">
                         <Heart className="w-4 h-4 text-red-400" />
-                        {place.count.toLocaleString()}
+                        {place.likesCount.toLocaleString()}
                       </div>
                       {place.category && (
-                        <span className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-full">
-                          {place.category}
+                        <span className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-full truncate max-w-[80px]">
+                          {place.category.split(">").pop()?.split(",")[0] || place.category}
                         </span>
                       )}
                     </div>
@@ -297,7 +291,14 @@ function HomeContent() {
                 ].map((item) => (
                   <button
                     key={item.label}
-                    className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow"
+                    onClick={() => {
+                      if (loggedIn) {
+                        router.push(`/course/create?search=${encodeURIComponent(item.label)}`);
+                      } else {
+                        openLoginModal();
+                      }
+                    }}
+                    className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl shadow-sm hover:shadow-md hover:scale-105 transition-all"
                   >
                     <div className={`p-3 rounded-full ${item.color}`}>
                       <item.icon className="w-5 h-5" />

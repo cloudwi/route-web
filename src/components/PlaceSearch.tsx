@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Place } from "@/types";
 
 interface PlaceSearchProps {
   onPlaceSelect: (place: Place) => void;
   onSearchResults?: (places: Place[]) => void;
+  initialSearch?: string;
 }
 
 interface BackendPlaceResponse {
@@ -19,20 +20,29 @@ interface BackendPlaceResponse {
   naver_map_url: string;
 }
 
-export default function PlaceSearch({ onPlaceSelect, onSearchResults }: PlaceSearchProps) {
-  const [query, setQuery] = useState("");
+export default function PlaceSearch({ onPlaceSelect, onSearchResults, initialSearch = "" }: PlaceSearchProps) {
+  const [query, setQuery] = useState(initialSearch);
   const [results, setResults] = useState<Place[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const hasInitialSearched = useRef(false);
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
+  // 초기 검색어가 있으면 자동 검색
+  useEffect(() => {
+    if (initialSearch && !hasInitialSearched.current) {
+      hasInitialSearched.current = true;
+      performSearch(initialSearch);
+    }
+  }, [initialSearch]);
+
+  const performSearch = async (searchQuery: string) => {
+    if (!searchQuery.trim()) return;
 
     setIsSearching(true);
 
     // 백엔드 서버 검색 API 호출
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
     try {
-      const response = await fetch(`${baseUrl}/api/v1/search?query=${encodeURIComponent(query)}`);
+      const response = await fetch(`${baseUrl}/api/v1/search?query=${encodeURIComponent(searchQuery)}`);
       const data = await response.json();
 
       // 백엔드 응답을 Place 형식으로 변환
@@ -59,6 +69,10 @@ export default function PlaceSearch({ onPlaceSelect, onSearchResults }: PlaceSea
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const handleSearch = () => {
+    performSearch(query);
   };
 
   const handleSelectPlace = (place: Place) => {

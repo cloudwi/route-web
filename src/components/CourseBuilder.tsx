@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Place } from "@/types";
 import { api } from "@/lib/api";
 import PlaceSearch from "./PlaceSearch";
-import NaverMap, { RouteInfo, RouteSection } from "./NaverMap";
+import NaverMap from "./NaverMap";
 import Toast, { ToastType } from "./Toast";
 import {
   ChevronUp,
@@ -17,39 +17,19 @@ import {
   Tag,
   List,
   Map,
-  Clock,
-  Navigation,
 } from "lucide-react";
 
-// 거리 포맷팅 (미터 -> km)
-const formatDistance = (meters: number): string => {
-  if (!meters || isNaN(meters)) return "-";
-  if (meters < 1000) {
-    return `${meters}m`;
-  }
-  return `${(meters / 1000).toFixed(1)}km`;
-};
+interface CourseBuilderProps {
+  initialSearch?: string;
+}
 
-// 시간 포맷팅 (밀리초 -> 분/시간)
-const formatDuration = (ms: number): string => {
-  if (!ms || isNaN(ms)) return "-";
-  const minutes = Math.round(ms / 1000 / 60);
-  if (minutes < 60) {
-    return `${minutes}분`;
-  }
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  return remainingMinutes > 0 ? `${hours}시간 ${remainingMinutes}분` : `${hours}시간`;
-};
-
-export default function CourseBuilder() {
+export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps) {
   const router = useRouter();
   const [places, setPlaces] = useState<Place[]>([]);
   const [searchResults, setSearchResults] = useState<Place[]>([]);
   const [courseName, setCourseName] = useState("");
   const [selectedPlaceId, setSelectedPlaceId] = useState<string>();
   const [mobileView, setMobileView] = useState<"map" | "list">("map");
-  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [toast, setToast] = useState<{ message: string; type: ToastType; isVisible: boolean }>({
     message: "",
     type: "success",
@@ -142,101 +122,73 @@ export default function CourseBuilder() {
     places.find((p) => p.id === selectedPlaceId) ||
     searchResults.find((p) => p.id === selectedPlaceId);
 
-  // 구간별 이동 정보 컴포넌트
-  const SectionInfo = ({ section }: { section: RouteSection }) => (
-    <div className="flex items-center justify-center py-2">
-      <div className="flex items-center gap-3 px-3 py-1.5 bg-gray-50 rounded-lg text-xs text-gray-500">
-        <div className="flex items-center gap-1">
-          <Navigation className="w-3 h-3" />
-          <span>{formatDistance(section.distance)}</span>
-        </div>
-        <div className="w-px h-3 bg-gray-300" />
-        <div className="flex items-center gap-1">
-          <Clock className="w-3 h-3" />
-          <span>{formatDuration(section.duration)}</span>
-        </div>
-      </div>
-    </div>
-  );
-
   // 장소 목록 컴포넌트 (재사용)
   const PlaceList = () => (
-    <div className="space-y-1">
+    <div className="space-y-2">
       {places.map((place, index) => (
-        <div key={place.id}>
-          <div
-            className={`bg-white border rounded-xl p-4 transition-all cursor-pointer ${
-              selectedPlaceId === place.id
-                ? "border-blue-500 shadow-md"
-                : "border-gray-200 hover:border-gray-300"
-            }`}
-            onClick={() => {
-              setSelectedPlaceId(place.id);
-              setMobileView("map");
-            }}
-          >
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
-                {index + 1}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-gray-900 truncate">
-                  {place.name}
-                </h4>
-                <p className="text-sm text-gray-500 truncate">
-                  {place.address}
-                </p>
-                {place.category && (
-                  <span className="inline-block mt-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
-                    {place.category}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-col gap-1">
-                {index > 0 && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      movePlace(index, "up");
-                    }}
-                    className="p-1 hover:bg-gray-100 rounded"
-                  >
-                    <ChevronUp className="w-4 h-4" />
-                  </button>
-                )}
-                {index < places.length - 1 && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      movePlace(index, "down");
-                    }}
-                    className="p-1 hover:bg-gray-100 rounded"
-                  >
-                    <ChevronDown className="w-4 h-4" />
-                  </button>
-                )}
+        <div
+          key={place.id}
+          className={`bg-white border rounded-xl p-4 transition-all cursor-pointer ${
+            selectedPlaceId === place.id
+              ? "border-blue-500 shadow-md"
+              : "border-gray-200 hover:border-gray-300"
+          }`}
+          onClick={() => {
+            setSelectedPlaceId(place.id);
+            setMobileView("map");
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
+              {index + 1}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-medium text-gray-900 truncate">
+                {place.name}
+              </h4>
+              <p className="text-sm text-gray-500 truncate">
+                {place.address}
+              </p>
+              {place.category && (
+                <span className="inline-block mt-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                  {place.category}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              {index > 0 && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleRemovePlace(place.id);
+                    movePlace(index, "up");
                   }}
-                  className="p-1 hover:bg-red-100 text-red-500 rounded"
+                  className="p-1 hover:bg-gray-100 rounded"
                 >
-                  <X className="w-4 h-4" />
+                  <ChevronUp className="w-4 h-4" />
                 </button>
-              </div>
+              )}
+              {index < places.length - 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    movePlace(index, "down");
+                  }}
+                  className="p-1 hover:bg-gray-100 rounded"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemovePlace(place.id);
+                }}
+                className="p-1 hover:bg-red-100 text-red-500 rounded"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           </div>
-          {/* 구간별 이동 시간 표시 */}
-          {index < places.length - 1 && routeInfo && (
-            <SectionInfo
-              section={
-                places.length === 2
-                  ? { distance: routeInfo.distance, duration: routeInfo.duration }
-                  : routeInfo.sections?.[index] || { distance: 0, duration: 0 }
-              }
-            />
-          )}
         </div>
       ))}
     </div>
@@ -273,6 +225,7 @@ export default function CourseBuilder() {
             <PlaceSearch
               onPlaceSelect={handleAddPlace}
               onSearchResults={handleSearchResults}
+              initialSearch={initialSearch}
             />
 
             <div className="mt-6">
@@ -289,21 +242,6 @@ export default function CourseBuilder() {
                   선택된 장소 ({places.length})
                 </h3>
               </div>
-
-              {/* 경로 정보 표시 */}
-              {routeInfo && places.length >= 2 && (
-                <div className="mb-4 p-3 bg-blue-50 rounded-xl flex items-center justify-around">
-                  <div className="flex items-center gap-2 text-blue-700">
-                    <Navigation className="w-4 h-4" />
-                    <span className="font-semibold">{formatDistance(routeInfo.distance)}</span>
-                  </div>
-                  <div className="w-px h-6 bg-blue-200" />
-                  <div className="flex items-center gap-2 text-blue-700">
-                    <Clock className="w-4 h-4" />
-                    <span className="font-semibold">{formatDuration(routeInfo.duration)}</span>
-                  </div>
-                </div>
-              )}
 
               <PlaceList />
             </div>
@@ -329,10 +267,9 @@ export default function CourseBuilder() {
         <div className="flex-1 bg-gray-100 relative overflow-hidden">
           <div className="absolute inset-0">
             <NaverMap
-              places={searchResults.length > 0 && places.length === 0 ? searchResults : places}
+              places={places}
               selectedPlaceId={selectedPlaceId}
               onPlaceClick={(place) => setSelectedPlaceId(place.id)}
-              onRouteCalculated={setRouteInfo}
             />
           </div>
 
@@ -408,29 +345,11 @@ export default function CourseBuilder() {
         {/* Map (Always visible, full screen) */}
         <div className="absolute inset-0">
           <NaverMap
-            places={searchResults.length > 0 && places.length === 0 ? searchResults : places}
+            places={places}
             selectedPlaceId={selectedPlaceId}
             onPlaceClick={(place) => setSelectedPlaceId(place.id)}
-            onRouteCalculated={setRouteInfo}
           />
         </div>
-
-        {/* Route Info Badge - Mobile */}
-        {places.length >= 2 && routeInfo && (
-          <div className="absolute top-4 left-4 right-4 z-10">
-            <div className="bg-white rounded-xl shadow-lg p-3 flex items-center justify-around">
-              <div className="flex items-center gap-2 text-blue-600">
-                <Navigation className="w-4 h-4" />
-                <span className="font-semibold text-sm">{formatDistance(routeInfo.distance)}</span>
-              </div>
-              <div className="w-px h-5 bg-gray-200" />
-              <div className="flex items-center gap-2 text-blue-600">
-                <Clock className="w-4 h-4" />
-                <span className="font-semibold text-sm">{formatDuration(routeInfo.duration)}</span>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Mobile Bottom Sheet */}
         <div
@@ -455,6 +374,7 @@ export default function CourseBuilder() {
                   setMobileView("map");
                 }}
                 onSearchResults={handleSearchResults}
+                initialSearch={initialSearch}
               />
 
               <div className="mt-3 flex items-center justify-between">
