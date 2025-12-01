@@ -1,3 +1,6 @@
+import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from "axios";
+import type { DirectionsResponse, DirectionsMode } from "@/types";
+
 const API_BASE_URL = "http://localhost:3000";
 
 // 토큰 관리
@@ -18,8 +21,45 @@ export const isLoggedIn = (): boolean => {
   return !!getToken();
 };
 
+// Axios 인스턴스 생성
+const axiosInstance: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// 요청 인터셉터 - 토큰 자동 추가
+axiosInstance.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const token = getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// 응답 인터셉터 - 401 에러 처리
+axiosInstance.interceptors.response.use(
+  (response: AxiosResponse) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      removeToken();
+      if (typeof window !== "undefined") {
+        window.location.href = "/";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // API 클라이언트
 export const api = {
+  // 기존 fetch 스타일 호환을 위한 메서드 (Response 객체 반환)
   async fetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
     const token = getToken();
 
@@ -37,7 +77,6 @@ export const api = {
       headers,
     });
 
-    // 401 에러시 토큰 제거 및 로그인 페이지로
     if (response.status === 401) {
       removeToken();
       window.location.href = "/";
@@ -46,38 +85,32 @@ export const api = {
     return response;
   },
 
+  // Axios 기반 메서드들
   async get<T>(endpoint: string): Promise<T> {
-    const response = await this.fetch(endpoint);
-    return response.json();
+    const response = await axiosInstance.get<T>(endpoint);
+    return response.data;
   },
 
   async post<T>(endpoint: string, data?: unknown): Promise<T> {
-    const response = await this.fetch(endpoint, {
-      method: "POST",
-      body: data ? JSON.stringify(data) : undefined,
-    });
-    return response.json();
+    const response = await axiosInstance.post<T>(endpoint, data);
+    return response.data;
   },
 
   async put<T>(endpoint: string, data?: unknown): Promise<T> {
-    const response = await this.fetch(endpoint, {
-      method: "PUT",
-      body: data ? JSON.stringify(data) : undefined,
-    });
-    return response.json();
+    const response = await axiosInstance.put<T>(endpoint, data);
+    return response.data;
   },
 
   async delete<T>(endpoint: string): Promise<T> {
-    const response = await this.fetch(endpoint, {
-      method: "DELETE",
-    });
-    return response.json();
+    const response = await axiosInstance.delete<T>(endpoint);
+    return response.data;
   },
 };
 
-// Directions API
-import type { DirectionsResponse, DirectionsMode } from "@/types";
+// Axios 인스턴스 직접 내보내기 (필요시 사용)
+export { axiosInstance };
 
+// Directions API
 export interface GetDirectionsParams {
   startLat: number;
   startLng: number;
@@ -91,30 +124,30 @@ export interface GetDirectionsParams {
 }
 
 export async function getDirections(params: GetDirectionsParams): Promise<DirectionsResponse> {
-  const searchParams = new URLSearchParams({
+  const queryParams: Record<string, string> = {
     start_lat: params.startLat.toString(),
     start_lng: params.startLng.toString(),
     end_lat: params.endLat.toString(),
     end_lng: params.endLng.toString(),
     mode: params.mode,
-  });
+  };
 
   if (params.pathType !== undefined) {
-    searchParams.append("path_type", params.pathType.toString());
+    queryParams.path_type = params.pathType.toString();
   }
   if (params.routeOption) {
-    searchParams.append("route_option", params.routeOption);
+    queryParams.route_option = params.routeOption;
   }
   if (params.carType !== undefined) {
-    searchParams.append("car_type", params.carType.toString());
+    queryParams.car_type = params.carType.toString();
   }
   if (params.waypoints && params.waypoints.length > 0) {
-    searchParams.append("waypoints", JSON.stringify(params.waypoints));
+    queryParams.waypoints = JSON.stringify(params.waypoints);
   }
 
-  const response = await api.fetch(`/api/v1/directions?${searchParams.toString()}`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch directions");
-  }
-  return response.json();
+  const response = await axiosInstance.get<DirectionsResponse>("/api/v1/directions", {
+    params: queryParams,
+  });
+
+  return response.data;
 }
