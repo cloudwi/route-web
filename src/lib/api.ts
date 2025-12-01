@@ -74,3 +74,47 @@ export const api = {
     return response.json();
   },
 };
+
+// Directions API
+import type { DirectionsResponse, DirectionsMode } from "@/types";
+
+export interface GetDirectionsParams {
+  startLat: number;
+  startLng: number;
+  endLat: number;
+  endLng: number;
+  mode: DirectionsMode;
+  pathType?: number;
+  routeOption?: string;
+  carType?: number;
+  waypoints?: { lat: number; lng: number }[];
+}
+
+export async function getDirections(params: GetDirectionsParams): Promise<DirectionsResponse> {
+  const searchParams = new URLSearchParams({
+    start_lat: params.startLat.toString(),
+    start_lng: params.startLng.toString(),
+    end_lat: params.endLat.toString(),
+    end_lng: params.endLng.toString(),
+    mode: params.mode,
+  });
+
+  if (params.pathType !== undefined) {
+    searchParams.append("path_type", params.pathType.toString());
+  }
+  if (params.routeOption) {
+    searchParams.append("route_option", params.routeOption);
+  }
+  if (params.carType !== undefined) {
+    searchParams.append("car_type", params.carType.toString());
+  }
+  if (params.waypoints && params.waypoints.length > 0) {
+    searchParams.append("waypoints", JSON.stringify(params.waypoints));
+  }
+
+  const response = await api.fetch(`/api/v1/directions?${searchParams.toString()}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch directions");
+  }
+  return response.json();
+}
