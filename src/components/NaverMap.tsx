@@ -13,8 +13,8 @@ interface NaverMapProps {
 
 // 교통수단별 색상
 const TRAFFIC_COLORS: Record<number, string> = {
-  1: "#0052A4", // 지하철 - 파란색
-  2: "#5BB025", // 버스 - 초록색
+  1: "#34D399", // 지하철 - 밝은 초록색
+  2: "#60A5FA", // 버스 - 밝은 파란색
   3: "#888888", // 도보 - 회색
 };
 
@@ -114,34 +114,105 @@ export default function NaverMap({
     });
 
     // 경로 폴리라인 그리기
-    if (places.length >= 2) {
-      // routeSections가 있고 sub_paths 정보가 있으면 실제 경로 그리기
-      const hasDetailedRoute = routeSections?.some(
+    if (places.length >= 2 && routeSections) {
+      // 자동차 경로가 있는지 확인
+      const hasDrivingPath = routeSections.some(
+        (section) => section.drivingPath && section.drivingPath.length > 0
+      );
+
+      // 대중교통 경로가 있는지 확인
+      const hasTransitRoute = routeSections.some(
         (section) => section.transit?.sub_paths && section.transit.sub_paths.length > 0
       );
 
-      if (hasDetailedRoute && routeSections) {
+      if (hasDrivingPath) {
+        // 자동차 상세 경로 그리기
+        routeSections.forEach((section) => {
+          if (section.drivingPath && section.drivingPath.length > 0) {
+            const path = section.drivingPath.map(
+              // path는 [lng, lat] 형태
+              (coord) => new naver.maps.LatLng(coord[1], coord[0])
+            );
+
+            const polyline = new naver.maps.Polyline({
+              map: mapInstanceRef.current,
+              path: path,
+              strokeColor: "#4A90D9", // 자동차 - 파란색
+              strokeWeight: 5,
+              strokeOpacity: 0.8,
+              strokeStyle: "solid",
+              strokeLineCap: "round",
+              strokeLineJoin: "round",
+            });
+
+            polylinesRef.current.push(polyline);
+          }
+        });
+      } else if (hasTransitRoute) {
         // 대중교통 상세 경로 그리기
         routeSections.forEach((section) => {
           if (section.transit?.sub_paths) {
             section.transit.sub_paths.forEach((subPath) => {
-              // 좌표가 있는 구간만 그리기
-              if (subPath.start_x && subPath.start_y && subPath.end_x && subPath.end_y) {
-                const path = [
-                  new naver.maps.LatLng(subPath.start_y, subPath.start_x),
-                  new naver.maps.LatLng(subPath.end_y, subPath.end_x),
-                ];
+              // 도보는 그리지 않음
+              if (subPath.traffic_type === 3) return;
 
-                const color = TRAFFIC_COLORS[subPath.traffic_type] || "#3b82f6";
-                const isDotted = subPath.traffic_type === 3; // 도보는 점선
+              const color = TRAFFIC_COLORS[subPath.traffic_type] || "#3b82f6";
+              const strokeStyle = "solid";
+              const strokeOpacity = 0.8;
+
+              // 1순위: graph_pos가 있으면 상세 경로 좌표 사용 (가장 정확)
+              if (subPath.graph_pos && subPath.graph_pos.length > 1) {
+                const path = subPath.graph_pos!.map(
+                  // graph_pos는 [lng, lat] 형태
+                  (coord) => new naver.maps.LatLng(coord[1], coord[0])
+                );
 
                 const polyline = new naver.maps.Polyline({
                   map: mapInstanceRef.current,
                   path: path,
                   strokeColor: color,
-                  strokeWeight: subPath.traffic_type === 3 ? 3 : 5,
-                  strokeOpacity: 0.8,
-                  strokeStyle: isDotted ? "shortdash" : "solid",
+                  strokeWeight: 5,
+                  strokeOpacity: strokeOpacity,
+                  strokeStyle: strokeStyle,
+                  strokeLineCap: "round",
+                  strokeLineJoin: "round",
+                });
+
+                polylinesRef.current.push(polyline);
+              }
+              // 2순위: pass_stop_list가 있으면 역/정류장 좌표를 연결
+              else if (subPath.pass_stop_list && subPath.pass_stop_list.length > 1) {
+                const path = subPath.pass_stop_list.map(
+                  (station) => new naver.maps.LatLng(station.y, station.x)
+                );
+
+                const polyline = new naver.maps.Polyline({
+                  map: mapInstanceRef.current,
+                  path: path,
+                  strokeColor: color,
+                  strokeWeight: 5,
+                  strokeOpacity: strokeOpacity,
+                  strokeStyle: strokeStyle,
+                  strokeLineCap: "round",
+                  strokeLineJoin: "round",
+                });
+
+                polylinesRef.current.push(polyline);
+              }
+              // 3순위: start/end 좌표가 있으면 직선 연결
+              else if (subPath.start_x && subPath.start_y && subPath.end_x && subPath.end_y) {
+                const path = [
+                  new naver.maps.LatLng(subPath.start_y, subPath.start_x),
+                  new naver.maps.LatLng(subPath.end_y, subPath.end_x),
+                ];
+
+                const polyline = new naver.maps.Polyline({
+                  map: mapInstanceRef.current,
+                  path: path,
+                  strokeColor: color,
+                  strokeWeight: 5,
+                  strokeOpacity: strokeOpacity,
+                  strokeStyle: strokeStyle,
                   strokeLineCap: "round",
                   strokeLineJoin: "round",
                 });
@@ -197,6 +268,24 @@ export default function NaverMap({
 
         polylinesRef.current.push(polyline);
       }
+    } else if (places.length >= 2) {
+      // routeSections가 없으면 직선으로 연결
+      const path = places.map(
+        (place) => new naver.maps.LatLng(place.lat, place.lng)
+      );
+
+      const polyline = new naver.maps.Polyline({
+        map: mapInstanceRef.current,
+        path: path,
+        strokeColor: "#3b82f6",
+        strokeWeight: 4,
+        strokeOpacity: 0.7,
+        strokeStyle: "shortdash",
+        strokeLineCap: "round",
+        strokeLineJoin: "round",
+      });
+
+      polylinesRef.current.push(polyline);
     }
 
     // 장소가 있으면 지도 범위 조정
@@ -213,12 +302,33 @@ export default function NaverMap({
       // 경로의 중간 좌표도 bounds에 포함
       if (routeSections) {
         routeSections.forEach((section) => {
+          // 자동차 경로 좌표
+          if (section.drivingPath) {
+            section.drivingPath.forEach((coord) => {
+              bounds.extend(new naver.maps.LatLng(coord[1], coord[0]));
+            });
+          }
+          // 대중교통 경로 좌표
           section.transit?.sub_paths?.forEach((subPath) => {
-            if (subPath.start_x && subPath.start_y) {
-              bounds.extend(new naver.maps.LatLng(subPath.start_y, subPath.start_x));
+            // graph_pos의 모든 좌표를 bounds에 포함
+            if (subPath.graph_pos) {
+              subPath.graph_pos.forEach((coord) => {
+                bounds.extend(new naver.maps.LatLng(coord[1], coord[0]));
+              });
             }
-            if (subPath.end_x && subPath.end_y) {
-              bounds.extend(new naver.maps.LatLng(subPath.end_y, subPath.end_x));
+            // pass_stop_list의 모든 좌표를 bounds에 포함
+            else if (subPath.pass_stop_list) {
+              subPath.pass_stop_list.forEach((station) => {
+                bounds.extend(new naver.maps.LatLng(station.y, station.x));
+              });
+            } else {
+              // 둘 다 없으면 start/end 좌표만 포함
+              if (subPath.start_x && subPath.start_y) {
+                bounds.extend(new naver.maps.LatLng(subPath.start_y, subPath.start_x));
+              }
+              if (subPath.end_x && subPath.end_y) {
+                bounds.extend(new naver.maps.LatLng(subPath.end_y, subPath.end_x));
+              }
             }
           });
         });

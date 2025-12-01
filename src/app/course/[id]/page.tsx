@@ -40,12 +40,25 @@ export default function CourseDetailPage({
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string>();
 
-  // 경로 관련 상태
-  const [transportMode, setTransportMode] = useState<DirectionsMode>("transit");
+  // 경로 관련 상태 - localStorage에서 이전 모드 불러오기
+  const [transportMode, setTransportMode] = useState<DirectionsMode>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("transportMode");
+      return (saved as DirectionsMode) || "transit";
+    }
+    return "transit";
+  });
   const [routeSections, setRouteSections] = useState<RouteSection[]>([]);
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
   const [totalRouteTime, setTotalRouteTime] = useState(0);
   const [totalRouteDistance, setTotalRouteDistance] = useState(0);
+
+  // transportMode 변경 시 localStorage에 저장
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("transportMode", transportMode);
+    }
+  }, [transportMode]);
 
   // 경로 조회 함수
   const fetchRoutes = useCallback(async () => {
@@ -84,6 +97,7 @@ export default function CourseDetailPage({
             totalDistance += bestPath.total_distance;
           } else if (transportMode === "driving" && response.result.summary) {
             section.driving = response.result.summary;
+            section.drivingPath = response.result.path;
             totalTime += response.result.summary.duration_minutes;
             totalDistance += response.result.summary.distance;
           }
@@ -176,8 +190,8 @@ export default function CourseDetailPage({
       <header className="bg-white border-b border-gray-100 px-4 py-3 z-20 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.back()}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            onClick={() => router.push("/")}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
@@ -313,7 +327,7 @@ export default function CourseDetailPage({
                                 ? `${formatDuration(routeSections[index].driving!.duration_minutes)} · ${formatDistance(routeSections[index].driving!.distance)}`
                                 : "경로 없음"}
                             </span>
-                            {routeSections[index].transit && routeSections[index].transit!.transfer_count > 0 && (
+                            {transportMode === "transit" && routeSections[index].transit && routeSections[index].transit!.transfer_count > 0 && (
                               <span className="text-xs text-gray-400">
                                 (환승 {routeSections[index].transit!.transfer_count}회)
                               </span>

@@ -55,12 +55,25 @@ export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps
     isVisible: false,
   });
 
-  // 경로 관련 상태
-  const [transportMode, setTransportMode] = useState<DirectionsMode>("transit");
+  // 경로 관련 상태 - localStorage에서 이전 모드 불러오기
+  const [transportMode, setTransportMode] = useState<DirectionsMode>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("transportMode");
+      return (saved as DirectionsMode) || "transit";
+    }
+    return "transit";
+  });
   const [routeSections, setRouteSections] = useState<RouteSection[]>([]);
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
   const [totalRouteTime, setTotalRouteTime] = useState(0);
   const [totalRouteDistance, setTotalRouteDistance] = useState(0);
+
+  // transportMode 변경 시 localStorage에 저장
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("transportMode", transportMode);
+    }
+  }, [transportMode]);
 
   const showToast = (message: string, type: ToastType) => {
     setToast({ message, type, isVisible: true });
@@ -114,6 +127,7 @@ export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps
             totalDistance += bestPath.total_distance;
           } else if (transportMode === "driving" && response.result.summary) {
             section.driving = response.result.summary;
+            section.drivingPath = response.result.path;
             totalTime += response.result.summary.duration_minutes;
             totalDistance += response.result.summary.distance;
           }
@@ -240,7 +254,7 @@ export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps
                   ? `${formatDuration(section.driving.duration_minutes)} · ${formatDistance(section.driving.distance)}`
                   : "경로 없음"}
               </span>
-              {section.transit && section.transit.transfer_count > 0 && (
+              {transportMode === "transit" && section.transit && section.transit.transfer_count > 0 && (
                 <span className="text-xs text-gray-400">
                   (환승 {section.transit.transfer_count}회)
                 </span>
@@ -341,14 +355,17 @@ export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps
 
       {/* Header */}
       <header className="bg-white border-b border-gray-100 px-4 py-3 z-20 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <button
+          onClick={() => router.push("/")}
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+        >
           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
             <MapPin className="w-5 h-5 text-white" />
           </div>
           <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            RouteK
+            Route
           </span>
-        </div>
+        </button>
         <span className="text-sm text-gray-500">코스 만들기</span>
       </header>
 

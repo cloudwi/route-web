@@ -66,6 +66,15 @@ export interface TransitLane {
   bus_id?: number;
 }
 
+// 경유 역/정류장 정보
+export interface TransitStation {
+  index: number;
+  station_name: string;
+  x: number;
+  y: number;
+  is_non_stop?: string | null;
+}
+
 // 대중교통 sub_path (구간 정보)
 export interface TransitSubPath {
   traffic_type: number; // 1: 지하철, 2: 버스, 3: 도보
@@ -73,6 +82,8 @@ export interface TransitSubPath {
   section_time: number;
   station_count?: number;
   lane?: TransitLane[];
+  start_id?: number;
+  end_id?: number;
   start_name?: string;
   start_x?: number;
   start_y?: number;
@@ -81,6 +92,10 @@ export interface TransitSubPath {
   end_y?: number;
   way?: string;
   way_code?: number;
+  // 경유 역/정류장 목록
+  pass_stop_list?: TransitStation[];
+  // 상세 경로 좌표 (include_graph_info=true 시 제공) [lng, lat][]
+  graph_pos?: [number, number][];
 }
 
 export interface TransitPath {
@@ -112,6 +127,8 @@ export interface DirectionsResult {
   count?: number;
   paths?: TransitPath[];
   summary?: DrivingSummary;
+  // 자동차 경로 좌표 배열 [lng, lat][]
+  path?: [number, number][];
 }
 
 export interface DirectionsResponse {
@@ -139,6 +156,8 @@ export interface RouteSection {
   to: Place;
   transit?: TransitPath;
   driving?: DrivingSummary;
+  // 자동차 경로 좌표 배열 [lng, lat][]
+  drivingPath?: [number, number][];
 }
 
 export interface RouteInfo {

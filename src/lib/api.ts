@@ -132,6 +132,11 @@ export async function getDirections(params: GetDirectionsParams): Promise<Direct
     mode: params.mode,
   };
 
+  // 대중교통 모드일 때 상세 경로 좌표 요청
+  if (params.mode === "transit") {
+    queryParams.include_graph_info = "true";
+  }
+
   if (params.pathType !== undefined) {
     queryParams.path_type = params.pathType.toString();
   }

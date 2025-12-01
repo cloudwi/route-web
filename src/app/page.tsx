@@ -117,6 +117,28 @@ function HomeContent() {
     }
   };
 
+  const handleLikePlace = async (placeId: number, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    try {
+      const response = await api.fetch(`/api/v1/places/${placeId}/like`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        // 좋아요 수 업데이트
+        setPopularPlaces(popularPlaces.map(place =>
+          place.id === placeId
+            ? { ...place, likesCount: place.likesCount + 1 }
+            : place
+        ));
+      }
+    } catch (error) {
+      console.error("Failed to like place:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Login Modal */}
@@ -231,7 +253,7 @@ function HomeContent() {
                   popularPlaces.slice(0, 5).map((place, index) => (
                     <div
                       key={place.id}
-                      className="flex items-center gap-4 p-4 border-b border-gray-50 last:border-b-0 hover:bg-blue-50 hover:scale-[1.01] transition-all cursor-pointer"
+                      className="flex items-center gap-4 p-4 border-b border-gray-50 last:border-b-0 hover:bg-blue-50 transition-all"
                     >
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
@@ -246,16 +268,24 @@ function HomeContent() {
                       >
                         {index + 1}
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <a
+                        href={place.naverMapUrl || `https://map.naver.com/p/search/${encodeURIComponent(place.name)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 min-w-0 hover:opacity-80 transition-opacity"
+                      >
                         <h4 className="font-medium text-gray-900 truncate">
                           {place.name}
                         </h4>
-                        <p className="text-sm text-gray-500">{place.address}</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 truncate">{place.address}</p>
+                      </a>
+                      <button
+                        onClick={(e) => handleLikePlace(place.id, e)}
+                        className="flex items-center gap-1 text-sm text-gray-500 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg"
+                      >
                         <Heart className="w-4 h-4 text-red-400" />
-                        {place.likesCount.toLocaleString()}
-                      </div>
+                        <span>{place.likesCount.toLocaleString()}</span>
+                      </button>
                       {place.category && (
                         <span className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-full truncate max-w-[80px]">
                           {place.category.split(">").pop()?.split(",")[0] || place.category}
