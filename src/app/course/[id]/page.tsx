@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, isLoggedIn } from "@/lib/api";
 import { Course } from "@/types";
 import NaverMap, { RouteInfo } from "@/components/NaverMap";
 import {
@@ -48,8 +48,12 @@ export default function CourseDetailPage({
   const [selectedPlaceId, setSelectedPlaceId] = useState<string>();
 
   useEffect(() => {
+    if (!isLoggedIn()) {
+      router.replace("/");
+      return;
+    }
     fetchCourse();
-  }, [id]);
+  }, [id, router]);
 
   const fetchCourse = async () => {
     setIsLoading(true);

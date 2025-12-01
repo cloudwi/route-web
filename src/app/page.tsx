@@ -21,15 +21,7 @@ import {
   Trash2,
   Loader2,
 } from "lucide-react";
-
-// 임시 인기 장소 데이터
-const MOCK_POPULAR_PLACES: PopularPlace[] = [
-  { id: "1", name: "성수동 카페거리", address: "서울 성동구", category: "카페", count: 2847 },
-  { id: "2", name: "을지로 힙지로", address: "서울 중구", category: "핫플", count: 2156 },
-  { id: "3", name: "연남동 연트럴파크", address: "서울 마포구", category: "산책", count: 1893 },
-  { id: "4", name: "한남동 맛집거리", address: "서울 용산구", category: "맛집", count: 1654 },
-  { id: "5", name: "익선동 한옥거리", address: "서울 종로구", category: "데이트", count: 1432 },
-];
+import LoginModal from "@/components/LoginModal";
 
 const getCategoryIcon = (category: string) => {
   switch (category) {
@@ -48,9 +40,12 @@ function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
+  const [popularPlaces, setPopularPlaces] = useState<PopularPlace[]>([]);
   const [loggedIn, setLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState<"home" | "my">("home");
   const [isLoadingCourses, setIsLoadingCourses] = useState(false);
+  const [isLoadingPopularPlaces, setIsLoadingPopularPlaces] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // URL 파라미터로 탭 설정
   useEffect(() => {
@@ -60,10 +55,26 @@ function HomeContent() {
     }
   }, [searchParams]);
 
-  // 로그인 상태 확인
+  // 로그인 상태 확인 및 인기 장소 불러오기
   useEffect(() => {
     setLoggedIn(isLoggedIn());
+    fetchPopularPlaces();
   }, []);
+
+  const fetchPopularPlaces = async () => {
+    setIsLoadingPopularPlaces(true);
+    try {
+      const response = await api.fetch("/api/v1/popular_places");
+      if (response.ok) {
+        const data = await response.json();
+        setPopularPlaces(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch popular places:", error);
+    } finally {
+      setIsLoadingPopularPlaces(false);
+    }
+  };
 
   // 내 코스 탭이고 로그인 되어있으면 API로 코스 불러오기
   useEffect(() => {
@@ -87,8 +98,12 @@ function HomeContent() {
     }
   };
 
-  const handleKakaoLogin = () => {
-    window.location.href = "http://localhost:3000/auth/kakao";
+  const openLoginModal = () => {
+    setIsLoginModalOpen(true);
+  };
+
+  const closeLoginModal = () => {
+    setIsLoginModalOpen(false);
   };
 
   const handleLogout = () => {
@@ -117,6 +132,9 @@ function HomeContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Login Modal */}
+      <LoginModal isOpen={isLoginModalOpen} onClose={closeLoginModal} />
+
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 bg-white z-20 shadow-sm">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
@@ -137,13 +155,13 @@ function HomeContent() {
             </button>
           ) : (
             <button
-              onClick={handleKakaoLogin}
+              onClick={openLoginModal}
               className="flex items-center gap-2 px-4 py-2 bg-[#FEE500] text-[#000000] text-sm font-medium rounded-lg hover:bg-[#FDD800] transition-colors"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 3C6.48 3 2 6.58 2 11c0 2.84 1.89 5.33 4.71 6.73-.16.57-.58 2.07-.67 2.39-.11.4.15.39.31.29.13-.08 2.04-1.38 2.87-1.94.89.14 1.82.21 2.78.21 5.52 0 10-3.58 10-8 0-4.42-4.48-8-10-8z" />
               </svg>
-              카카오 로그인
+              로그인
             </button>
           )}
         </div>
@@ -198,7 +216,7 @@ function HomeContent() {
                 </Link>
               ) : (
                 <button
-                  onClick={handleKakaoLogin}
+                  onClick={openLoginModal}
                   className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#FEE500] text-[#000000] font-semibold rounded-xl hover:bg-[#FDD800] transition-colors"
                 >
                   로그인하고 코스 만들기
@@ -218,39 +236,52 @@ function HomeContent() {
                 </button>
               </div>
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                {MOCK_POPULAR_PLACES.map((place, index) => (
-                  <div
-                    key={place.id}
-                    className="flex items-center gap-4 p-4 border-b border-gray-50 last:border-b-0 hover:bg-blue-50 hover:scale-[1.01] transition-all cursor-pointer"
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                        index === 0
-                          ? "bg-yellow-400 text-yellow-900"
-                          : index === 1
-                          ? "bg-gray-300 text-gray-700"
-                          : index === 2
-                          ? "bg-orange-300 text-orange-800"
-                          : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {index + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-gray-900 truncate">
-                        {place.name}
-                      </h4>
-                      <p className="text-sm text-gray-500">{place.address}</p>
-                    </div>
-                    <div className="flex items-center gap-1 text-sm text-gray-500">
-                      <Heart className="w-4 h-4 text-red-400" />
-                      {place.count.toLocaleString()}
-                    </div>
-                    <span className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-full">
-                      {place.category}
-                    </span>
+                {isLoadingPopularPlaces ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
                   </div>
-                ))}
+                ) : popularPlaces.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm">인기 장소가 없습니다</p>
+                  </div>
+                ) : (
+                  popularPlaces.slice(0, 5).map((place, index) => (
+                    <div
+                      key={place.id}
+                      className="flex items-center gap-4 p-4 border-b border-gray-50 last:border-b-0 hover:bg-blue-50 hover:scale-[1.01] transition-all cursor-pointer"
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                          index === 0
+                            ? "bg-yellow-400 text-yellow-900"
+                            : index === 1
+                            ? "bg-gray-300 text-gray-700"
+                            : index === 2
+                            ? "bg-orange-300 text-orange-800"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 truncate">
+                          {place.name}
+                        </h4>
+                        <p className="text-sm text-gray-500">{place.address}</p>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-gray-500">
+                        <Heart className="w-4 h-4 text-red-400" />
+                        {place.count.toLocaleString()}
+                      </div>
+                      {place.category && (
+                        <span className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-full">
+                          {place.category}
+                        </span>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             </section>
 
@@ -327,13 +358,13 @@ function HomeContent() {
                   카카오 로그인을 해주세요
                 </p>
                 <button
-                  onClick={handleKakaoLogin}
+                  onClick={openLoginModal}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-[#FEE500] text-[#000000] font-medium rounded-xl hover:bg-[#FDD800] transition-colors"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 3C6.48 3 2 6.58 2 11c0 2.84 1.89 5.33 4.71 6.73-.16.57-.58 2.07-.67 2.39-.11.4.15.39.31.29.13-.08 2.04-1.38 2.87-1.94.89.14 1.82.21 2.78.21 5.52 0 10-3.58 10-8 0-4.42-4.48-8-10-8z" />
                   </svg>
-                  카카오로 시작하기
+                  로그인하기
                 </button>
               </div>
             ) : isLoadingCourses ? (
@@ -450,7 +481,7 @@ function HomeContent() {
             </Link>
           ) : (
             <button
-              onClick={handleKakaoLogin}
+              onClick={openLoginModal}
               className="flex flex-col items-center py-2 px-4 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
             >
               <PlusCircle className="w-6 h-6 mb-1" />
