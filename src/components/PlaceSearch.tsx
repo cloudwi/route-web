@@ -43,7 +43,7 @@ export default function PlaceSearch({ onPlaceSelect, onSearchResults, initialSea
     // 백엔드 서버 검색 API 호출
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
     try {
-      const response = await fetch(`${baseUrl}/api/v1/search?query=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`${baseUrl}/api/v1/external/search?query=${encodeURIComponent(searchQuery)}`);
       const data = await response.json();
 
       // 백엔드 응답을 Place 형식으로 변환

@@ -19,6 +19,19 @@ import {
   Music,
   Trash2,
   Loader2,
+  UtensilsCrossed,
+  Cake,
+  Beer,
+  Hospital,
+  Pill,
+  Landmark,
+  GraduationCap,
+  Dumbbell,
+  Scissors,
+  ShoppingCart,
+  Fuel,
+  Theater,
+  Search,
 } from "lucide-react";
 import LoginModal from "@/components/LoginModal";
 
@@ -127,12 +140,18 @@ function HomeContent() {
       });
 
       if (response.ok) {
-        // 좋아요 수 업데이트
-        setPopularPlaces(popularPlaces.map(place =>
-          place.id === placeId
-            ? { ...place, likesCount: place.likesCount + 1 }
-            : place
-        ));
+        const data = await response.json();
+        // API 응답에서 실제 좋아요 수를 받아와서 업데이트
+        if (data.likesCount !== undefined) {
+          setPopularPlaces(popularPlaces.map(place =>
+            place.id === placeId
+              ? { ...place, likesCount: data.likesCount }
+              : place
+          ));
+        } else {
+          // API 응답에 likesCount가 없으면 다시 인기장소 목록 조회
+          fetchPopularPlaces();
+        }
       }
     } catch (error) {
       console.error("Failed to like place:", error);
@@ -206,6 +225,17 @@ function HomeContent() {
       <main className="max-w-lg mx-auto px-4 pt-28 pb-24">
         {activeTab === "home" ? (
           <>
+            {/* Search Bar */}
+            <div
+              onClick={() => router.push("/search")}
+              className="mb-6 bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-all"
+            >
+              <div className="flex items-center gap-3 text-gray-400">
+                <Search className="w-5 h-5" />
+                <span className="text-sm">장소나 코스를 검색하세요</span>
+              </div>
+            </div>
+
             {/* Hero Banner */}
             <div className="bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl p-6 text-white mb-6">
               <h2 className="text-2xl font-bold mb-2">
@@ -302,26 +332,30 @@ function HomeContent() {
               <h3 className="font-bold text-gray-900 mb-4">카테고리</h3>
               <div className="grid grid-cols-4 gap-3">
                 {[
-                  { icon: Coffee, label: "카페", color: "bg-amber-100 text-amber-600" },
-                  { icon: Utensils, label: "맛집", color: "bg-red-100 text-red-600" },
-                  { icon: Camera, label: "핫플", color: "bg-purple-100 text-purple-600" },
-                  { icon: Music, label: "문화", color: "bg-blue-100 text-blue-600" },
+                  { icon: UtensilsCrossed, label: "음식점", color: "bg-orange-100 text-orange-600" },
+                  { icon: Coffee, label: "카페,디저트", color: "bg-amber-100 text-amber-600" },
+                  { icon: Beer, label: "술집", color: "bg-yellow-100 text-yellow-600" },
+                  { icon: Hospital, label: "병원,의원", color: "bg-red-100 text-red-600" },
+                  { icon: Pill, label: "건강,의료", color: "bg-green-100 text-green-600" },
+                  { icon: Landmark, label: "금융,보험", color: "bg-blue-100 text-blue-600" },
+                  { icon: GraduationCap, label: "교육,학문", color: "bg-indigo-100 text-indigo-600" },
+                  { icon: Dumbbell, label: "스포츠시설", color: "bg-purple-100 text-purple-600" },
+                  { icon: Scissors, label: "미용", color: "bg-pink-100 text-pink-600" },
+                  { icon: ShoppingCart, label: "생활,편의", color: "bg-teal-100 text-teal-600" },
+                  { icon: Fuel, label: "주유소", color: "bg-slate-100 text-slate-600" },
+                  { icon: Theater, label: "문화,여가", color: "bg-violet-100 text-violet-600" },
                 ].map((item) => (
                   <button
                     key={item.label}
                     onClick={() => {
-                      if (loggedIn) {
-                        router.push(`/course/create?search=${encodeURIComponent(item.label)}`);
-                      } else {
-                        openLoginModal();
-                      }
+                      router.push(`/search?q=${encodeURIComponent(item.label)}`);
                     }}
-                    className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl shadow-sm hover:shadow-md hover:scale-105 transition-all"
+                    className="flex flex-col items-center gap-2 p-3 bg-white rounded-2xl shadow-sm hover:shadow-md hover:scale-105 transition-all"
                   >
                     <div className={`p-3 rounded-full ${item.color}`}>
                       <item.icon className="w-5 h-5" />
                     </div>
-                    <span className="text-sm text-gray-700">{item.label}</span>
+                    <span className="text-xs text-gray-700 text-center leading-tight">{item.label}</span>
                   </button>
                 ))}
               </div>
