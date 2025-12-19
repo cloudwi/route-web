@@ -51,11 +51,8 @@ function HomeContent() {
   const fetchPopularPlaces = async () => {
     setIsLoadingPopularPlaces(true);
     try {
-      const response = await api.fetch("/api/v1/popular_places");
-      if (response.ok) {
-        const data = await response.json();
-        setPopularPlaces(data.places || []);
-      }
+      const data = await api.get<{ places: PopularPlace[] }>("/api/v1/popular_places");
+      setPopularPlaces(data.places || []);
     } catch (error) {
       console.error("Failed to fetch popular places:", error);
     } finally {
@@ -81,23 +78,17 @@ function HomeContent() {
     event.stopPropagation();
 
     try {
-      const response = await api.fetch(`/api/v1/places/${placeId}/likes`, {
-        method: "POST",
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        // API 응답에서 실제 좋아요 수를 받아와서 업데이트
-        if (data.likesCount !== undefined) {
-          setPopularPlaces(popularPlaces.map(place =>
-            place.id === placeId.toString()
-              ? { ...place, likesCount: data.likesCount }
-              : place
-          ));
-        } else {
-          // API 응답에 likesCount가 없으면 다시 인기장소 목록 조회
-          fetchPopularPlaces();
-        }
+      const data = await api.post<{ likesCount?: number }>(`/api/v1/places/${placeId}/likes`);
+      // API 응답에서 실제 좋아요 수를 받아와서 업데이트
+      if (data.likesCount !== undefined) {
+        setPopularPlaces(popularPlaces.map(place =>
+          place.id === placeId.toString()
+            ? { ...place, likesCount: data.likesCount }
+            : place
+        ));
+      } else {
+        // API 응답에 likesCount가 없으면 다시 인기장소 목록 조회
+        fetchPopularPlaces();
       }
     } catch (error) {
       console.error("Failed to like place:", error);

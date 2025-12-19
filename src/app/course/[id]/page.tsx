@@ -31,13 +31,8 @@ export default function CourseDetailPage({
     const loadCourse = async () => {
       setIsLoading(true);
       try {
-        const response = await api.fetch(`/api/v1/courses/${id}`);
-        if (response.ok) {
-          const data = await response.json();
-          setCourse(data);
-        } else {
-          router.push("/?tab=my");
-        }
+        const data = await api.get<Course>(`/api/v1/courses/${id}`);
+        setCourse(data);
       } catch (error) {
         console.error("Failed to fetch course:", error);
         router.push("/?tab=my");
@@ -53,15 +48,8 @@ export default function CourseDetailPage({
     if (!confirm("정말 삭제하시겠습니까?")) return;
 
     try {
-      const response = await api.fetch(`/api/v1/courses/${id}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        router.push("/?tab=my");
-      } else {
-        alert("코스 삭제에 실패했습니다.");
-      }
+      await api.delete(`/api/v1/courses/${id}`);
+      router.push("/?tab=my");
     } catch (error) {
       console.error("Failed to delete course:", error);
       alert("코스 삭제에 실패했습니다.");

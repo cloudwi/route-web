@@ -78,19 +78,10 @@ export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps
     showToast("코스를 저장하고 있습니다...", "loading");
 
     try {
-      const response = await api.fetch("/api/v1/courses", {
-        method: "POST",
-        body: JSON.stringify({
-          name: courseName,
-          places,
-        }),
+      await api.post("/api/v1/courses", {
+        name: courseName,
+        places,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.message || errorData.error || "코스 저장에 실패했습니다.";
-        throw new Error(errorMessage);
-      }
 
       showToast("코스가 저장되었습니다!", "success");
 

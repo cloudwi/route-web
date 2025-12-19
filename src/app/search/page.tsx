@@ -31,14 +31,11 @@ function SearchContent() {
 
     setIsLoadingPlaces(true);
     try {
-      const response = await api.fetch(
+      const data = await api.get<{ places: Place[] }>(
         `/api/v1/places/search?query=${encodeURIComponent(searchQuery)}`
       );
-      if (response.ok) {
-        const data = await response.json();
-        setPlaces(data.places || []);
-        setHasSearchedPlaces(true);
-      }
+      setPlaces(data.places || []);
+      setHasSearchedPlaces(true);
     } catch (error) {
       console.error("Failed to search places:", error);
     } finally {
@@ -52,14 +49,11 @@ function SearchContent() {
 
     setIsLoadingCourses(true);
     try {
-      const response = await api.fetch(
+      const data = await api.get<{ courses: Course[] }>(
         `/api/v1/courses/search?query=${encodeURIComponent(searchQuery)}`
       );
-      if (response.ok) {
-        const data = await response.json();
-        setCourses(data.courses || []);
-        setHasSearchedCourses(true);
-      }
+      setCourses(data.courses || []);
+      setHasSearchedCourses(true);
     } catch (error) {
       console.error("Failed to search courses:", error);
     } finally {

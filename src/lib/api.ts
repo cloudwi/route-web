@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 
-const API_BASE_URL = "http://localhost:3000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000";
 
 // 토큰 관리
 export const getToken = (): string | null => {
@@ -56,35 +56,8 @@ axiosInstance.interceptors.response.use(
   }
 );
 
-// API 클라이언트
+// API 클라이언트 (Axios 기반)
 export const api = {
-  // 기존 fetch 스타일 호환을 위한 메서드 (Response 객체 반환)
-  async fetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
-    const token = getToken();
-
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-      ...options.headers,
-    };
-
-    if (token) {
-      (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers,
-    });
-
-    if (response.status === 401) {
-      removeToken();
-      window.location.href = "/";
-    }
-
-    return response;
-  },
-
-  // Axios 기반 메서드들
   async get<T>(endpoint: string): Promise<T> {
     const response = await axiosInstance.get<T>(endpoint);
     return response.data;
@@ -102,6 +75,11 @@ export const api = {
 
   async delete<T>(endpoint: string): Promise<T> {
     const response = await axiosInstance.delete<T>(endpoint);
+    return response.data;
+  },
+
+  async patch<T>(endpoint: string, data?: unknown): Promise<T> {
+    const response = await axiosInstance.patch<T>(endpoint, data);
     return response.data;
   },
 };

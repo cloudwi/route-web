@@ -9,11 +9,8 @@ export function usePopularPlaces() {
   const fetchPlaces = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await api.fetch("/api/v1/popular_places");
-      if (response.ok) {
-        const data = await response.json();
-        setPlaces(data.places || []);
-      }
+      const data = await api.get<{ places: PopularPlace[] }>("/api/v1/popular_places");
+      setPlaces(data.places || []);
     } catch (error) {
       console.error("Failed to fetch popular places:", error);
     } finally {
@@ -23,27 +20,20 @@ export function usePopularPlaces() {
 
   const likePlace = useCallback(async (placeId: number) => {
     try {
-      const response = await api.fetch(`/api/v1/places/${placeId}/likes`, {
-        method: "POST",
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.likesCount !== undefined) {
-          setPlaces((prev) =>
-            prev.map((place) =>
-              place.id === placeId.toString()
-                ? { ...place, likesCount: data.likesCount }
-                : place
-            )
-          );
-        } else {
-          // 좋아요 수가 없으면 다시 조회
-          await fetchPlaces();
-        }
-        return true;
+      const data = await api.post<{ likesCount?: number }>(`/api/v1/places/${placeId}/likes`);
+      if (data.likesCount !== undefined) {
+        setPlaces((prev) =>
+          prev.map((place) =>
+            place.id === placeId.toString()
+              ? { ...place, likesCount: data.likesCount }
+              : place
+          )
+        );
+      } else {
+        // 좋아요 수가 없으면 다시 조회
+        await fetchPlaces();
       }
-      return false;
+      return true;
     } catch (error) {
       console.error("Failed to like place:", error);
       return false;
