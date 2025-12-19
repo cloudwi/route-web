@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { isLoggedIn } from "@/lib/api";
-import CourseBuilder from "@/components/CourseBuilder";
+import CourseBuilder from "@/components/features/course/CourseBuilder";
 import { Loader2 } from "lucide-react";
 
 function CreateCourseContent() {

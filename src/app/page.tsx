@@ -2,25 +2,18 @@
 
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
-import { Course, PopularPlace } from "@/types";
+import { useRouter } from "next/navigation";
+import { PopularPlace } from "@/types";
 import { isLoggedIn, removeToken, api } from "@/lib/api";
 import {
-  Home as HomeIcon,
   PlusCircle,
-  User as UserIcon,
   MapPin,
   Heart,
   TrendingUp,
   Star,
   Coffee,
-  Utensils,
-  Camera,
-  Music,
-  Trash2,
   Loader2,
   UtensilsCrossed,
-  Cake,
   Beer,
   Hospital,
   Pill,
@@ -32,32 +25,26 @@ import {
   Fuel,
   Theater,
   Search,
+  User,
 } from "lucide-react";
-import LoginModal from "@/components/LoginModal";
+import LoginModal from "@/components/features/auth/LoginModal";
+import PlaceMapModal from "@/components/features/place/PlaceMapModal";
 
 
 function HomeContent() {
-  const searchParams = useSearchParams();
   const router = useRouter();
-  const [courses, setCourses] = useState<Course[]>([]);
   const [popularPlaces, setPopularPlaces] = useState<PopularPlace[]>([]);
   const [loggedIn, setLoggedIn] = useState(false);
-  const [activeTab, setActiveTab] = useState<"home" | "my">("home");
-  const [isLoadingCourses, setIsLoadingCourses] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isLoadingPopularPlaces, setIsLoadingPopularPlaces] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-
-  // URL 파라미터로 탭 설정
-  useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab === "my") {
-      setActiveTab("my");
-    }
-  }, [searchParams]);
+  const [selectedPlace, setSelectedPlace] = useState<PopularPlace | null>(null);
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
 
   // 로그인 상태 확인 및 인기 장소 불러오기
   useEffect(() => {
     setLoggedIn(isLoggedIn());
+    setIsCheckingAuth(false);
     fetchPopularPlaces();
   }, []);
 
@@ -76,28 +63,6 @@ function HomeContent() {
     }
   };
 
-  // 내 코스 탭이고 로그인 되어있으면 API로 코스 불러오기
-  useEffect(() => {
-    if (activeTab === "my" && loggedIn) {
-      fetchCourses();
-    }
-  }, [activeTab, loggedIn]);
-
-  const fetchCourses = async () => {
-    setIsLoadingCourses(true);
-    try {
-      const response = await api.fetch("/api/v1/courses");
-      if (response.ok) {
-        const data = await response.json();
-        setCourses(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch courses:", error);
-    } finally {
-      setIsLoadingCourses(false);
-    }
-  };
-
   const openLoginModal = () => {
     setIsLoginModalOpen(true);
   };
@@ -111,31 +76,12 @@ function HomeContent() {
     setLoggedIn(false);
   };
 
-  const handleDeleteCourse = async (courseId: string) => {
-    if (!confirm("정말 삭제하시겠습니까?")) return;
-
-    try {
-      const response = await api.fetch(`/api/v1/courses/${courseId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        setCourses(courses.filter((c) => c.id !== courseId));
-      } else {
-        alert("코스 삭제에 실패했습니다.");
-      }
-    } catch (error) {
-      console.error("Failed to delete course:", error);
-      alert("코스 삭제에 실패했습니다.");
-    }
-  };
-
   const handleLikePlace = async (placeId: number, event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
 
     try {
-      const response = await api.fetch(`/api/v1/places/${placeId}/like`, {
+      const response = await api.fetch(`/api/v1/places/${placeId}/likes`, {
         method: "POST",
       });
 
@@ -144,7 +90,7 @@ function HomeContent() {
         // API 응답에서 실제 좋아요 수를 받아와서 업데이트
         if (data.likesCount !== undefined) {
           setPopularPlaces(popularPlaces.map(place =>
-            place.id === placeId
+            place.id === placeId.toString()
               ? { ...place, likesCount: data.likesCount }
               : place
           ));
@@ -158,14 +104,31 @@ function HomeContent() {
     }
   };
 
+  const handlePlaceClick = (place: PopularPlace) => {
+    setSelectedPlace(place);
+    setIsMapModalOpen(true);
+  };
+
+  const handleCloseMapModal = () => {
+    setIsMapModalOpen(false);
+    setTimeout(() => setSelectedPlace(null), 200);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Login Modal */}
       <LoginModal isOpen={isLoginModalOpen} onClose={closeLoginModal} />
 
+      {/* Place Map Modal */}
+      <PlaceMapModal
+        isOpen={isMapModalOpen}
+        onClose={handleCloseMapModal}
+        place={selectedPlace}
+      />
+
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 bg-white z-20 shadow-sm">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 lg:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
               <MapPin className="w-5 h-5 text-white" />
@@ -174,12 +137,15 @@ function HomeContent() {
               Route
             </h1>
           </div>
-          {loggedIn ? (
+          {isCheckingAuth ? (
+            <div className="w-9 h-9" />
+          ) : loggedIn ? (
             <button
               onClick={handleLogout}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="로그아웃"
             >
-              로그아웃
+              <User className="w-5 h-5" />
             </button>
           ) : (
             <button
@@ -195,49 +161,24 @@ function HomeContent() {
         </div>
       </header>
 
-      {/* Tab Navigation */}
-      <div className="fixed top-14 left-0 right-0 bg-white z-10 border-b border-gray-100">
-        <div className="max-w-lg mx-auto px-4 flex">
-          <button
-            onClick={() => setActiveTab("home")}
-            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-all ${
-              activeTab === "home"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-            }`}
-          >
-            홈
-          </button>
-          <button
-            onClick={() => setActiveTab("my")}
-            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-all ${
-              activeTab === "my"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-            }`}
-          >
-            내 코스
-          </button>
-        </div>
-      </div>
-
       {/* Main Content */}
-      <main className="max-w-lg mx-auto px-4 pt-28 pb-24">
-        {activeTab === "home" ? (
-          <>
-            {/* Search Bar */}
-            <div
-              onClick={() => router.push("/search")}
-              className="mb-6 bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-all"
-            >
-              <div className="flex items-center gap-3 text-gray-400">
-                <Search className="w-5 h-5" />
-                <span className="text-sm">장소나 코스를 검색하세요</span>
+      <main className="max-w-6xl mx-auto px-4 lg:px-8 pt-20 pb-24">
+        <div className="lg:grid lg:grid-cols-2 lg:gap-6">
+            {/* Left Column - Search Bar & Hero Banner */}
+            <div className="lg:col-span-2">
+              {/* Search Bar */}
+              <div
+                onClick={() => router.push("/search")}
+                className="mb-6 bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-all"
+              >
+                <div className="flex items-center gap-3 text-gray-400">
+                  <Search className="w-5 h-5" />
+                  <span className="text-sm">장소나 코스를 검색하세요</span>
+                </div>
               </div>
-            </div>
 
-            {/* Hero Banner */}
-            <div className="bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl p-6 text-white mb-6">
+              {/* Hero Banner */}
+              <div className="bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl p-6 lg:p-8 text-white mb-6">
               <h2 className="text-2xl font-bold mb-2">
                 특별한 하루를 계획해보세요
               </h2>
@@ -245,26 +186,29 @@ function HomeContent() {
                 데이트, 친구 모임, 혼자만의 시간까지<br />
                 나만의 코스를 만들고 저장하세요
               </p>
-              {loggedIn ? (
-                <Link
-                  href="/course/create"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-blue-600 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
-                >
-                  <PlusCircle className="w-5 h-5" />
-                  코스 만들기
-                </Link>
-              ) : (
-                <button
-                  onClick={openLoginModal}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#FEE500] text-[#000000] font-semibold rounded-xl hover:bg-[#FDD800] transition-colors"
-                >
-                  로그인하고 코스 만들기
-                </button>
+              {!isCheckingAuth && (
+                loggedIn ? (
+                  <Link
+                    href="/course/create"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-blue-600 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
+                  >
+                    <PlusCircle className="w-5 h-5" />
+                    코스 만들기
+                  </Link>
+                ) : (
+                  <button
+                    onClick={openLoginModal}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#FEE500] text-[#000000] font-semibold rounded-xl hover:bg-[#FDD800] transition-colors"
+                  >
+                    로그인하고 코스 만들기
+                  </button>
+                )
               )}
+            </div>
             </div>
 
             {/* Popular Places Ranking */}
-            <section className="mb-6">
+            <section className="mb-6 lg:mb-0">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="w-5 h-5 text-orange-500" />
                 <h3 className="font-bold text-gray-900">인기 장소 TOP 5</h3>
@@ -283,7 +227,8 @@ function HomeContent() {
                   popularPlaces.slice(0, 5).map((place, index) => (
                     <div
                       key={place.id}
-                      className="flex items-center gap-4 p-4 border-b border-gray-50 last:border-b-0 hover:bg-blue-50 transition-all"
+                      className="flex items-center gap-4 p-4 border-b border-gray-50 last:border-b-0 hover:bg-blue-50 transition-all cursor-pointer"
+                      onClick={() => handlePlaceClick(place)}
                     >
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
@@ -298,19 +243,14 @@ function HomeContent() {
                       >
                         {index + 1}
                       </div>
-                      <a
-                        href={place.naverMapUrl || `https://map.naver.com/p/search/${encodeURIComponent(place.name)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 min-w-0 hover:opacity-80 transition-opacity"
-                      >
+                      <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-gray-900 truncate">
                           {place.name}
                         </h4>
                         <p className="text-sm text-gray-500 truncate">{place.address}</p>
-                      </a>
+                      </div>
                       <button
-                        onClick={(e) => handleLikePlace(place.id, e)}
+                        onClick={(e) => handleLikePlace(parseInt(place.id), e)}
                         className="flex items-center gap-1 text-sm text-gray-500 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg"
                       >
                         <Heart className="w-4 h-4 text-red-400" />
@@ -394,164 +334,32 @@ function HomeContent() {
                 ))}
               </div>
             </section>
-          </>
-        ) : (
-          <>
-            {/* My Courses Tab */}
-            {!loggedIn ? (
-              <div className="text-center py-12">
-                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <UserIcon className="w-10 h-10 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  로그인이 필요해요
-                </h3>
-                <p className="text-gray-500 text-sm mb-6">
-                  내 코스를 저장하고 관리하려면<br />
-                  카카오 로그인을 해주세요
-                </p>
-                <button
-                  onClick={openLoginModal}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#FEE500] text-[#000000] font-medium rounded-xl hover:bg-[#FDD800] transition-colors"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 3C6.48 3 2 6.58 2 11c0 2.84 1.89 5.33 4.71 6.73-.16.57-.58 2.07-.67 2.39-.11.4.15.39.31.29.13-.08 2.04-1.38 2.87-1.94.89.14 1.82.21 2.78.21 5.52 0 10-3.58 10-8 0-4.42-4.48-8-10-8z" />
-                  </svg>
-                  로그인하기
-                </button>
-              </div>
-            ) : isLoadingCourses ? (
-              <div className="text-center py-12">
-                <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
-                <p className="text-gray-500">코스를 불러오는 중...</p>
-              </div>
-            ) : courses.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <MapPin className="w-10 h-10 text-blue-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  아직 저장된 코스가 없어요
-                </h3>
-                <p className="text-gray-500 text-sm mb-6">
-                  특별한 장소들을 모아<br />
-                  나만의 코스를 만들어보세요
-                </p>
-                <Link
-                  href="/course/create"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white font-medium rounded-xl hover:bg-blue-600 transition-colors"
-                >
-                  <PlusCircle className="w-5 h-5" />
-                  첫 코스 만들기
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-500">
-                    총 {courses.length}개의 코스
-                  </span>
-                  <Link
-                    href="/course/create"
-                    className="text-sm text-blue-600 font-medium flex items-center gap-1"
-                  >
-                    <PlusCircle className="w-4 h-4" />
-                    새 코스
-                  </Link>
-                </div>
-                {courses.map((course) => (
-                  <div
-                    key={course.id}
-                    onClick={() => router.push(`/course/${course.id}`)}
-                    className="bg-white rounded-2xl shadow-sm p-5 hover:shadow-lg hover:scale-[1.01] transition-all cursor-pointer"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-semibold text-gray-900 text-lg">
-                        {course.name}
-                      </h3>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteCourse(course.id);
-                        }}
-                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all hover:scale-110"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                    <div className="space-y-2">
-                      {course.places.slice(0, 3).map((place, index) => (
-                        <div key={place.id} className="flex items-center gap-3">
-                          <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-sm">
-                            {index + 1}
-                          </div>
-                          <span className="text-gray-600 text-sm truncate">
-                            {place.name}
-                          </span>
-                        </div>
-                      ))}
-                      {course.places.length > 3 && (
-                        <p className="text-sm text-gray-400 pl-9">
-                          +{course.places.length - 3}개 더보기
-                        </p>
-                      )}
-                    </div>
-                    <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-                      <span className="text-xs text-gray-400">
-                        {course.places.length}개 장소
-                      </span>
-                      <span className="text-sm text-blue-600 font-medium">
-                        지도에서 보기 →
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
+          </div>
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-20">
-        <div className="max-w-lg mx-auto px-6 py-2 flex justify-around safe-area-bottom">
-          <button
-            onClick={() => setActiveTab("home")}
-            className={`flex flex-col items-center py-2 px-4 rounded-xl transition-all ${
-              activeTab === "home" ? "text-blue-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <HomeIcon className="w-6 h-6 mb-1" />
-            <span className="text-xs">홈</span>
-          </button>
-          {loggedIn ? (
-            <Link
-              href="/course/create"
-              className="flex flex-col items-center py-2 px-4 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
-            >
-              <PlusCircle className="w-6 h-6 mb-1" />
-              <span className="text-xs">코스만들기</span>
-            </Link>
-          ) : (
-            <button
-              onClick={openLoginModal}
-              className="flex flex-col items-center py-2 px-4 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
-            >
-              <PlusCircle className="w-6 h-6 mb-1" />
-              <span className="text-xs">코스만들기</span>
-            </button>
-          )}
-          <button
-            onClick={() => setActiveTab("my")}
-            className={`flex flex-col items-center py-2 px-4 rounded-xl transition-all ${
-              activeTab === "my" ? "text-blue-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <UserIcon className="w-6 h-6 mb-1" />
-            <span className="text-xs">내 코스</span>
-          </button>
-        </div>
-      </nav>
+      {/* Bottom Navigation - Mobile Only */}
+      {!isCheckingAuth && (
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-20">
+          <div className="max-w-lg mx-auto px-6 py-3 flex justify-center safe-area-bottom">
+            {loggedIn ? (
+              <Link
+                href="/course/create"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white font-medium rounded-xl hover:bg-blue-600 transition-colors"
+              >
+                <PlusCircle className="w-5 h-5" />
+                코스 만들기
+              </Link>
+            ) : (
+              <button
+                onClick={openLoginModal}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#FEE500] text-[#000000] font-medium rounded-xl hover:bg-[#FDD800] transition-colors"
+              >
+                로그인하고 시작하기
+              </button>
+            )}
+          </div>
+        </nav>
+      )}
     </div>
   );
 }

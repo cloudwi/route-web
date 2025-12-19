@@ -106,7 +106,7 @@ function SearchContent() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 bg-white z-20 shadow-sm">
-        <div className="max-w-lg mx-auto px-4 py-4">
+        <div className="max-w-6xl mx-auto px-4 lg:px-8 py-4">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
@@ -141,7 +141,7 @@ function SearchContent() {
 
       {/* Tab Navigation */}
       <div className="fixed top-[80px] left-0 right-0 bg-white z-10 border-b border-gray-100">
-        <div className="max-w-lg mx-auto px-4 flex">
+        <div className="max-w-6xl mx-auto px-4 lg:px-8 flex">
           <button
             onClick={() => handleTabChange("places")}
             className={`flex-1 py-3 text-sm font-medium border-b-2 transition-all ${
@@ -166,7 +166,7 @@ function SearchContent() {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-lg mx-auto px-4 pt-32 pb-24">
+      <main className="max-w-6xl mx-auto px-4 lg:px-8 pt-32 pb-24">
         {activeTab === "places" ? (
           <section>
             {isLoadingPlaces ? (
@@ -181,7 +181,7 @@ function SearchContent() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="lg:grid lg:grid-cols-2 lg:gap-4 space-y-3 lg:space-y-0">
                 {places.map((place) => (
                   <div
                     key={place.id}
@@ -225,7 +225,7 @@ function SearchContent() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="lg:grid lg:grid-cols-2 lg:gap-4 space-y-3 lg:space-y-0">
                 {courses.map((course) => (
                   <div
                     key={course.id}

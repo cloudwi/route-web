@@ -1,5 +1,4 @@
 import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from "axios";
-import type { DirectionsResponse, DirectionsMode } from "@/types";
 
 const API_BASE_URL = "http://localhost:3000";
 
@@ -109,50 +108,3 @@ export const api = {
 
 // Axios 인스턴스 직접 내보내기 (필요시 사용)
 export { axiosInstance };
-
-// Directions API
-export interface GetDirectionsParams {
-  startLat: number;
-  startLng: number;
-  endLat: number;
-  endLng: number;
-  mode: DirectionsMode;
-  pathType?: number;
-  routeOption?: string;
-  carType?: number;
-  waypoints?: { lat: number; lng: number }[];
-}
-
-export async function getDirections(params: GetDirectionsParams): Promise<DirectionsResponse> {
-  const queryParams: Record<string, string> = {
-    start_lat: params.startLat.toString(),
-    start_lng: params.startLng.toString(),
-    end_lat: params.endLat.toString(),
-    end_lng: params.endLng.toString(),
-    mode: params.mode,
-  };
-
-  // 대중교통 모드일 때 상세 경로 좌표 요청
-  if (params.mode === "transit") {
-    queryParams.include_graph_info = "true";
-  }
-
-  if (params.pathType !== undefined) {
-    queryParams.path_type = params.pathType.toString();
-  }
-  if (params.routeOption) {
-    queryParams.route_option = params.routeOption;
-  }
-  if (params.carType !== undefined) {
-    queryParams.car_type = params.carType.toString();
-  }
-  if (params.waypoints && params.waypoints.length > 0) {
-    queryParams.waypoints = JSON.stringify(params.waypoints);
-  }
-
-  const response = await axiosInstance.get<DirectionsResponse>("/api/v1/directions", {
-    params: queryParams,
-  });
-
-  return response.data;
-}

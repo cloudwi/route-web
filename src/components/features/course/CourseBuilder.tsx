@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Place, DirectionsMode, RouteSection } from "@/types";
-import { api, getDirections } from "@/lib/api";
-import PlaceSearch from "./PlaceSearch";
-import NaverMap from "./NaverMap";
-import Toast, { ToastType } from "./Toast";
+import { Place } from "@/types";
+import { api } from "@/lib/api";
+import PlaceSearch from "../place/PlaceSearch";
+import NaverMap from "../map/NaverMap";
+import Toast, { ToastType } from "../../ui/Toast";
 import {
   ChevronUp,
   ChevronDown,
@@ -17,30 +17,11 @@ import {
   Tag,
   List,
   Map,
-  Car,
-  Train,
-  Clock,
-  Navigation,
-  Loader2,
 } from "lucide-react";
 
 interface CourseBuilderProps {
   initialSearch?: string;
 }
-
-// 시간 포맷팅 함수
-const formatDuration = (minutes: number): string => {
-  if (minutes < 60) return `${minutes}분`;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return mins > 0 ? `${hours}시간 ${mins}분` : `${hours}시간`;
-};
-
-// 거리 포맷팅 함수
-const formatDistance = (meters: number): string => {
-  if (meters < 1000) return `${meters}m`;
-  return `${(meters / 1000).toFixed(1)}km`;
-};
 
 export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps) {
   const router = useRouter();
@@ -55,26 +36,6 @@ export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps
     isVisible: false,
   });
 
-  // 경로 관련 상태 - localStorage에서 이전 모드 불러오기
-  const [transportMode, setTransportMode] = useState<DirectionsMode>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("transportMode");
-      return (saved as DirectionsMode) || "transit";
-    }
-    return "transit";
-  });
-  const [routeSections, setRouteSections] = useState<RouteSection[]>([]);
-  const [isLoadingRoute, setIsLoadingRoute] = useState(false);
-  const [totalRouteTime, setTotalRouteTime] = useState(0);
-  const [totalRouteDistance, setTotalRouteDistance] = useState(0);
-
-  // transportMode 변경 시 localStorage에 저장
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("transportMode", transportMode);
-    }
-  }, [transportMode]);
-
   const showToast = (message: string, type: ToastType) => {
     setToast({ message, type, isVisible: true });
   };
@@ -86,73 +47,6 @@ export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps
   const handleSearchResults = (results: Place[]) => {
     setSearchResults(results);
   };
-
-  // 경로 조회 함수
-  const fetchRoutes = useCallback(async () => {
-    if (places.length < 2) {
-      setRouteSections([]);
-      setTotalRouteTime(0);
-      setTotalRouteDistance(0);
-      return;
-    }
-
-    setIsLoadingRoute(true);
-    const sections: RouteSection[] = [];
-    let totalTime = 0;
-    let totalDistance = 0;
-
-    try {
-      for (let i = 0; i < places.length - 1; i++) {
-        const from = places[i];
-        const to = places[i + 1];
-
-        try {
-          const response = await getDirections({
-            startLat: from.lat,
-            startLng: from.lng,
-            endLat: to.lat,
-            endLng: to.lng,
-            mode: transportMode,
-          });
-
-          const section: RouteSection = {
-            from,
-            to,
-          };
-
-          if (transportMode === "transit" && response.result.paths && response.result.paths.length > 0) {
-            const bestPath = response.result.paths[0];
-            section.transit = bestPath;
-            totalTime += bestPath.total_time;
-            totalDistance += bestPath.total_distance;
-          } else if (transportMode === "driving" && response.result.summary) {
-            section.driving = response.result.summary;
-            section.drivingPath = response.result.path;
-            totalTime += response.result.summary.duration_minutes;
-            totalDistance += response.result.summary.distance;
-          }
-
-          sections.push(section);
-        } catch (error) {
-          console.error(`Failed to fetch route from ${from.name} to ${to.name}:`, error);
-          sections.push({ from, to });
-        }
-      }
-
-      setRouteSections(sections);
-      setTotalRouteTime(totalTime);
-      setTotalRouteDistance(totalDistance);
-    } catch (error) {
-      console.error("Failed to fetch routes:", error);
-    } finally {
-      setIsLoadingRoute(false);
-    }
-  }, [places, transportMode]);
-
-  // places나 transportMode 변경 시 경로 조회
-  useEffect(() => {
-    fetchRoutes();
-  }, [fetchRoutes]);
 
   const handleAddPlace = (place: Place) => {
     if (places.some((p) => p.id === place.id)) {
@@ -228,46 +122,6 @@ export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps
     places.find((p) => p.id === selectedPlaceId) ||
     searchResults.find((p) => p.id === selectedPlaceId);
 
-  // 구간 정보 컴포넌트
-  const SectionInfo = ({ sectionIndex }: { sectionIndex: number }) => {
-    const section = routeSections[sectionIndex];
-    if (!section) return null;
-
-    const hasRouteInfo = section.transit || section.driving;
-
-    return (
-      <div className="flex items-center justify-center py-2">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg text-sm text-gray-600">
-          {isLoadingRoute ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : hasRouteInfo ? (
-            <>
-              {transportMode === "transit" ? (
-                <Train className="w-3.5 h-3.5" />
-              ) : (
-                <Car className="w-3.5 h-3.5" />
-              )}
-              <span>
-                {section.transit
-                  ? `${formatDuration(section.transit.total_time)} · ${formatDistance(section.transit.total_distance)}`
-                  : section.driving
-                  ? `${formatDuration(section.driving.duration_minutes)} · ${formatDistance(section.driving.distance)}`
-                  : "경로 없음"}
-              </span>
-              {transportMode === "transit" && section.transit && section.transit.transfer_count > 0 && (
-                <span className="text-xs text-gray-400">
-                  (환승 {section.transit.transfer_count}회)
-                </span>
-              )}
-            </>
-          ) : (
-            <span className="text-gray-400">경로 조회 중...</span>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   // 장소 목록 컴포넌트 (재사용)
   const PlaceList = () => (
     <div className="space-y-1">
@@ -336,8 +190,6 @@ export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps
               </div>
             </div>
           </div>
-          {/* 다음 장소로 가는 경로 정보 */}
-          {index < places.length - 1 && <SectionInfo sectionIndex={index} />}
         </div>
       ))}
     </div>
@@ -395,57 +247,6 @@ export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps
                 </h3>
               </div>
 
-              {/* 이동 수단 선택 */}
-              {places.length >= 2 && (
-                <div className="mb-4">
-                  <div className="flex gap-2 mb-3">
-                    <button
-                      onClick={() => setTransportMode("transit")}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
-                        transportMode === "transit"
-                          ? "bg-blue-500 text-white"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
-                    >
-                      <Train className="w-4 h-4" />
-                      대중교통
-                    </button>
-                    <button
-                      onClick={() => setTransportMode("driving")}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
-                        transportMode === "driving"
-                          ? "bg-blue-500 text-white"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
-                    >
-                      <Car className="w-4 h-4" />
-                      자동차
-                    </button>
-                  </div>
-
-                  {/* 총 경로 정보 */}
-                  {(totalRouteTime > 0 || isLoadingRoute) && (
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl mb-3">
-                      <div className="flex items-center gap-2">
-                        <Navigation className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm font-medium text-blue-700">총 이동</span>
-                      </div>
-                      {isLoadingRoute ? (
-                        <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
-                      ) : (
-                        <div className="flex items-center gap-3 text-sm text-blue-700">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5" />
-                            {formatDuration(totalRouteTime)}
-                          </span>
-                          <span>{formatDistance(totalRouteDistance)}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
               <PlaceList />
             </div>
           </div>
@@ -473,7 +274,6 @@ export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps
               places={places}
               selectedPlaceId={selectedPlaceId}
               onPlaceClick={(place) => setSelectedPlaceId(place.id)}
-              routeSections={routeSections}
             />
           </div>
 
@@ -552,7 +352,6 @@ export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps
             places={places}
             selectedPlaceId={selectedPlaceId}
             onPlaceClick={(place) => setSelectedPlaceId(place.id)}
-            routeSections={routeSections}
           />
         </div>
 
@@ -673,57 +472,6 @@ export default function CourseBuilder({ initialSearch = "" }: CourseBuilderProps
                   지도 보기
                 </button>
               </div>
-
-              {/* 이동 수단 선택 - 모바일 */}
-              {places.length >= 2 && (
-                <div className="mb-4">
-                  <div className="flex gap-2 mb-3">
-                    <button
-                      onClick={() => setTransportMode("transit")}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
-                        transportMode === "transit"
-                          ? "bg-blue-500 text-white"
-                          : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      <Train className="w-4 h-4" />
-                      대중교통
-                    </button>
-                    <button
-                      onClick={() => setTransportMode("driving")}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
-                        transportMode === "driving"
-                          ? "bg-blue-500 text-white"
-                          : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      <Car className="w-4 h-4" />
-                      자동차
-                    </button>
-                  </div>
-
-                  {/* 총 경로 정보 */}
-                  {(totalRouteTime > 0 || isLoadingRoute) && (
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl mb-3">
-                      <div className="flex items-center gap-2">
-                        <Navigation className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm font-medium text-blue-700">총 이동</span>
-                      </div>
-                      {isLoadingRoute ? (
-                        <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
-                      ) : (
-                        <div className="flex items-center gap-3 text-sm text-blue-700">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5" />
-                            {formatDuration(totalRouteTime)}
-                          </span>
-                          <span>{formatDistance(totalRouteDistance)}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
 
               <input
                 type="text"
