@@ -37,7 +37,14 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleKakaoLogin = () => {
-    window.location.href = "http://localhost:3000/auth/kakao";
+    // 카카오 OAuth URL 구성
+    const KAKAO_AUTH_URL = `http://localhost:3000/auth/kakao`;
+    // 실제 프로덕션에서는:
+    // const KAKAO_AUTH_URL = `${process.env.NEXT_PUBLIC_API_URL}/auth/kakao`;
+
+    // 콜백 URL을 쿼리 파라미터로 전달 (백엔드에서 사용)
+    const callbackUrl = `${window.location.origin}/auth/callback`;
+    window.location.href = `${KAKAO_AUTH_URL}?redirect_uri=${encodeURIComponent(callbackUrl)}`;
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -76,16 +83,29 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         {/* Content */}
         <div className="p-8 pt-12 text-center">
           {/* Logo */}
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <MapPin className="w-8 h-8 text-white" />
+          <div className="w-16 h-16 mx-auto mb-4">
+            <img
+              src="/images/logo.png"
+              alt="플레이스 로고"
+              className="w-full h-full object-contain"
+              onError={(e) => {
+                // 이미지 로드 실패 시 폴백
+                e.currentTarget.style.display = 'none';
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                if (fallback) fallback.style.display = 'flex';
+              }}
+            />
+            <div className="hidden w-16 h-16 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-2xl items-center justify-center shadow-lg">
+              <MapPin className="w-8 h-8 text-white" />
+            </div>
           </div>
 
           <h2 className="text-xl font-bold text-gray-900 mb-2">
-            Route에 로그인하기
+            플레이스에 로그인하기
           </h2>
           <p className="text-gray-500 text-sm mb-8">
-            나만의 코스를 저장하고<br />
-            언제 어디서든 확인하세요
+            다양한 장소를 공유하고<br />
+            솔직한 리뷰를 나눠보세요
           </p>
 
           {/* Kakao Login Button */}
