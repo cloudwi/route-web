@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Place } from "@/types";
+import { api } from "@/lib/api";
 
 interface PlaceSearchProps {
   onPlaceSelect: (place: Place) => void;
@@ -40,11 +41,10 @@ export default function PlaceSearch({ onPlaceSelect, onSearchResults, initialSea
 
     setIsSearching(true);
 
-    // 백엔드 서버 검색 API 호출
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
     try {
-      const response = await fetch(`${baseUrl}/api/v1/external/search?query=${encodeURIComponent(searchQuery)}`);
-      const data = await response.json();
+      const data = await api.get<{ places: BackendPlaceResponse[] }>(
+        `/api/v1/external/search?query=${encodeURIComponent(searchQuery)}`
+      );
 
       // 백엔드 응답을 Place 형식으로 변환
       const places: Place[] = (data.places || []).map((item: BackendPlaceResponse) => ({

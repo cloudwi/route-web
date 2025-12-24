@@ -1,50 +1,94 @@
 "use client";
 
-import { Suspense } from "react";
-import { useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { setToken } from "@/lib/api";
+import { useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
-function AuthCallbackContent() {
-  const searchParams = useSearchParams();
+function CallbackContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { login } = useAuth();
 
   useEffect(() => {
-    const token = searchParams.get("token");
+    const handleCallback = async () => {
+      try {
+        // URL에서 토큰 또는 인증 코드 가져오기
+        const token = searchParams.get("token");
+        const code = searchParams.get("code");
+        const error = searchParams.get("error");
 
-    if (token) {
-      setToken(token);
-      router.replace("/");
-    } else {
-      // 토큰이 없으면 에러 처리
-      alert("로그인에 실패했습니다.");
-      router.replace("/");
-    }
-  }, [searchParams, router]);
+        if (error) {
+          console.error("Authentication error:", error);
+          alert("로그인에 실패했습니다. 다시 시도해주세요.");
+          router.push("/");
+          return;
+        }
+
+        if (token) {
+          // 토큰이 직접 전달된 경우
+          await login(token);
+          console.log("Login successful");
+
+          // 메인 페이지로 리다이렉트
+          router.push("/");
+        } else if (code) {
+          // 인증 코드가 전달된 경우 (OAuth 2.0 방식)
+          // TODO: 백엔드 API를 호출해서 code를 token으로 교환
+          const response = await fetch("/api/auth/token", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ code }),
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to exchange code for token");
+          }
+
+          const data = await response.json();
+          await login(data.token);
+
+          // 메인 페이지로 리다이렉트
+          router.push("/");
+        } else {
+          // 토큰도 코드도 없는 경우
+          console.error("No token or code provided");
+          alert("인증 정보가 없습니다.");
+          router.push("/");
+        }
+      } catch (error) {
+        console.error("Callback error:", error);
+        alert("로그인 처리 중 오류가 발생했습니다.");
+        router.push("/");
+      }
+    };
+
+    handleCallback();
+  }, [searchParams, router, login]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
       <div className="text-center">
-        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-gray-600">로그인 중...</p>
+        <Loader2 className="w-12 h-12 text-violet-500 animate-spin mx-auto mb-4" />
+        <h2 className="text-xl font-bold text-white mb-2">로그인 처리 중...</h2>
+        <p className="text-gray-400">잠시만 기다려주세요</p>
       </div>
     </div>
   );
 }
 
-export default function AuthCallbackPage() {
+export default function CallbackPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-gray-600">로그인 중...</p>
-          </div>
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+          <Loader2 className="w-12 h-12 text-violet-500 animate-spin" />
         </div>
       }
     >
-      <AuthCallbackContent />
+      <CallbackContent />
     </Suspense>
   );
 }
