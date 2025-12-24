@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, Image as ImageIcon, X, Check, Search } from "lucide-react";
+import { ArrowLeft, MapPin, Image as ImageIcon, X, Check, Search, Plus } from "lucide-react";
 import { PURPOSE_TAGS, type PurposeTag } from "@/types";
 
 interface Place {
@@ -14,6 +14,14 @@ interface Place {
   category_name: string;
 }
 
+interface ImageItem {
+  id: string;
+  url: string; // 이미지 URL (업로드 API 응답 또는 OG 이미지 URL)
+  type: 'place' | 'uploaded';
+  name?: string;
+  file?: File; // 업로드 전 파일 객체 (임시)
+}
+
 export default function WritePage() {
   const router = useRouter();
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
@@ -23,8 +31,9 @@ export default function WritePage() {
   const [showResults, setShowResults] = useState(false);
   const [content, setContent] = useState("");
   const [selectedTag, setSelectedTag] = useState<PurposeTag | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [images, setImages] = useState<ImageItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFetchingPlaceThumbnail, setIsFetchingPlaceThumbnail] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   // 외부 클릭 시 검색 결과 닫기
@@ -48,51 +57,40 @@ export default function WritePage() {
 
     setIsSearching(true);
     try {
-      // TODO: 실제 Kakao Places API 호출
-      // const response = await fetch(
-      //   `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}`,
-      //   {
-      //     headers: {
-      //       Authorization: `KakaoAK ${process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY}`,
-      //     },
-      //   }
-      // );
-      // const data = await response.json();
-      // setSearchResults(data.documents);
+      const response = await fetch(
+        `/api/v1/external/search?query=${encodeURIComponent(query)}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-      // Mock 데이터
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      const mockResults: Place[] = [
-        {
-          id: "1",
-          place_name: `${query} 카페`,
-          address_name: "서울 강남구 역삼동 123-45",
-          road_address_name: "서울 강남구 테헤란로 123",
-          phone: "02-1234-5678",
-          category_name: "음식점 > 카페",
-        },
-        {
-          id: "2",
-          place_name: `${query} 레스토랑`,
-          address_name: "서울 강남구 역삼동 678-90",
-          road_address_name: "서울 강남구 강남대로 456",
-          phone: "02-9876-5432",
-          category_name: "음식점 > 한식",
-        },
-        {
-          id: "3",
-          place_name: `${query} 맛집`,
-          address_name: "서울 서초구 서초동 111-22",
-          road_address_name: "서울 서초구 서초대로 789",
-          phone: "02-5555-6666",
-          category_name: "음식점 > 일식",
-        },
-      ];
-      setSearchResults(mockResults);
+      if (!response.ok) {
+        throw new Error('장소 검색 API 호출 실패');
+      }
+
+      const data = await response.json();
+
+      // API 응답 데이터를 Place 인터페이스에 맞게 매핑
+      // 백엔드 응답 구조에 맞게 수정 필요
+      const places: Place[] = data.results?.map((item: any) => ({
+        id: item.id || item.place_id || String(Math.random()),
+        place_name: item.place_name || item.name || '',
+        address_name: item.address_name || item.address || '',
+        road_address_name: item.road_address_name || item.road_address || '',
+        phone: item.phone || '',
+        category_name: item.category_name || item.category || '',
+      })) || [];
+
+      setSearchResults(places);
       setShowResults(true);
     } catch (error) {
       console.error("장소 검색 실패:", error);
       setSearchResults([]);
+      // 에러 발생 시에도 결과 표시 (사용자 경험 개선)
+      setShowResults(true);
     } finally {
       setIsSearching(false);
     }
@@ -105,42 +103,172 @@ export default function WritePage() {
     searchPlaces(query);
   };
 
+  // 네이버 지도 OG 이미지 가져오기
+  const fetchPlaceThumbnail = async (place: Place): Promise<string | null> => {
+    setIsFetchingPlaceThumbnail(true);
+    try {
+      // TODO: 실제 네이버 지도 OG 이미지 가져오기
+      // 1. 장소명으로 네이버 지도 URL 검색
+      // 2. 백엔드 API에 네이버 지도 URL 전달
+      // 3. 백엔드에서 OG 태그 추출하여 이미지 URL 반환
+
+      // 실제 구현 예시:
+      // const response = await fetch('/api/place/og-image', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({
+      //     placeName: place.place_name,
+      //     address: place.address_name
+      //   })
+      // });
+      // const data = await response.json();
+      // return data.imageUrl; // 네이버 지도 OG 이미지 URL
+
+      // Mock: Unsplash 랜덤 이미지 사용 (개발 중)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const mockThumbnails = [
+        'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&q=80',
+        'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80',
+        'https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?w=800&q=80',
+      ];
+      return mockThumbnails[Math.floor(Math.random() * mockThumbnails.length)];
+    } catch (error) {
+      console.error('네이버 지도 OG 이미지 가져오기 실패:', error);
+      return null;
+    } finally {
+      setIsFetchingPlaceThumbnail(false);
+    }
+  };
+
   // 장소 선택 핸들러
-  const handleSelectPlace = (place: Place) => {
+  const handleSelectPlace = async (place: Place) => {
     setSelectedPlace(place);
     setSearchQuery("");
     setSearchResults([]);
     setShowResults(false);
-  };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+    // 장소 썸네일 가져오기
+    const thumbnail = await fetchPlaceThumbnail(place);
+    if (thumbnail) {
+      const placeThumbnail: ImageItem = {
+        id: `place-${place.id}`,
+        url: thumbnail,
+        type: 'place',
+        name: place.place_name
       };
-      reader.readAsDataURL(file);
+      // 기존 장소 썸네일 제거하고 새로운 썸네일 추가
+      setImages(prev => [...prev.filter(img => img.type !== 'place'), placeThumbnail]);
     }
   };
 
+  // 이미지 업로드 API 호출
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
+      // TODO: 실제 이미지 업로드 API 호출
+      // const formData = new FormData();
+      // formData.append('image', file);
+      //
+      // const response = await fetch('/api/upload/image', {
+      //   method: 'POST',
+      //   body: formData
+      // });
+      // const data = await response.json();
+      // return data.url; // 업로드된 이미지 URL 반환
+
+      // Mock: 임시로 FileReader 사용 (개발 중)
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      });
+    } catch (error) {
+      console.error('이미지 업로드 실패:', error);
+      return null;
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      // 각 파일을 업로드하고 URL을 받아서 저장
+      for (const file of Array.from(files)) {
+        const uploadedUrl = await uploadImage(file);
+        if (uploadedUrl) {
+          const newImage: ImageItem = {
+            id: `uploaded-${Date.now()}-${Math.random()}`,
+            url: uploadedUrl, // 업로드 API에서 받은 URL
+            type: 'uploaded',
+            name: file.name
+          };
+          setImages(prev => [...prev, newImage]);
+        }
+      }
+    }
+  };
+
+  const handleRemoveImage = (id: string) => {
+    setImages(prev => prev.filter(img => img.id !== id));
+  };
+
   const handleSubmit = async () => {
-    if (!selectedPlace || !content) {
-      alert("장소와 내용을 입력해주세요");
+    if (!content) {
+      alert("내용을 입력해주세요");
       return;
     }
 
     setIsSubmitting(true);
-    // TODO: API 호출
-    setTimeout(() => {
+    try {
+      // 이미지 URL 목록 추출
+      const imageUrls = images.map(img => img.url);
+
+      // TODO: 실제 일기 작성 API 호출
+      // const response = await fetch('/api/diary/create', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({
+      //     content: content,
+      //     placeId: selectedPlace?.id,
+      //     placeName: selectedPlace?.place_name,
+      //     placeAddress: selectedPlace?.address_name,
+      //     tag: selectedTag,
+      //     images: imageUrls, // 업로드된 이미지 URL 목록 또는 네이버 지도 OG 이미지 URL
+      //   })
+      // });
+      //
+      // if (!response.ok) {
+      //   throw new Error('일기 작성 실패');
+      // }
+      //
+      // const data = await response.json();
+      // console.log('일기 작성 성공:', data);
+
+      // Mock: 임시 알림 (개발 중)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      console.log('일기 작성 데이터:', {
+        content,
+        place: selectedPlace,
+        tag: selectedTag,
+        images: imageUrls,
+      });
+
       alert("일기가 작성되었습니다!");
       router.push("/");
-    }, 1000);
+    } catch (error) {
+      console.error('일기 작성 실패:', error);
+      alert("일기 작성에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleRemovePlace = () => {
     setSelectedPlace(null);
     setSearchQuery("");
+    // 장소 썸네일도 제거
+    setImages(prev => prev.filter(img => img.type !== 'place'));
   };
 
   return (
@@ -160,7 +288,7 @@ export default function WritePage() {
           <h1 className="text-lg font-bold text-white">일기 작성</h1>
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting || !selectedPlace || !content}
+            disabled={isSubmitting || !content}
             className="px-4 py-2 rounded-xl text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: 'var(--gradient-primary)' }}
           >
@@ -173,10 +301,10 @@ export default function WritePage() {
       <main className="max-w-3xl mx-auto px-4 pt-24 pb-24">
         <div className="space-y-6">
           {/* Place Selection */}
-          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-6">
+          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-6 relative overflow-visible">
             <label className="flex items-center gap-2 text-white font-semibold mb-3">
               <MapPin className="w-5 h-5" style={{ color: 'var(--primary)' }} />
-              <span>어디에 다녀오셨나요?</span>
+              <span>어디에 다녀오셨나요? (선택)</span>
             </label>
 
             {selectedPlace ? (
@@ -218,7 +346,7 @@ export default function WritePage() {
 
                 {/* 검색 결과 드롭다운 */}
                 {showResults && searchResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 backdrop-blur-xl bg-slate-900/95 border border-white/20 rounded-2xl shadow-2xl overflow-hidden z-50 max-h-80 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-2 backdrop-blur-xl bg-slate-900/95 border border-white/20 rounded-2xl shadow-2xl overflow-hidden z-[100] max-h-80 overflow-y-auto">
                     {searchResults.map((place) => (
                       <button
                         key={place.id}
@@ -237,7 +365,7 @@ export default function WritePage() {
 
                 {/* 검색 결과 없음 */}
                 {showResults && !isSearching && searchQuery && searchResults.length === 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 backdrop-blur-xl bg-slate-900/95 border border-white/20 rounded-2xl shadow-2xl p-6 text-center z-50">
+                  <div className="absolute top-full left-0 right-0 mt-2 backdrop-blur-xl bg-slate-900/95 border border-white/20 rounded-2xl shadow-2xl p-6 text-center z-[100]">
                     <p className="text-gray-400">검색 결과가 없습니다</p>
                   </div>
                 )}
@@ -245,41 +373,69 @@ export default function WritePage() {
             )}
           </div>
 
-          {/* Image Upload */}
+          {/* Image Gallery */}
           <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-6">
-            <label className="flex items-center gap-2 text-white font-semibold mb-3">
-              <ImageIcon className="w-5 h-5" style={{ color: 'var(--primary)' }} />
-              <span>사진 추가 (선택)</span>
-            </label>
-
-            {imagePreview ? (
-              <div className="relative aspect-[16/10] rounded-2xl overflow-hidden bg-black/20">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                />
-                <button
-                  onClick={() => setImagePreview(null)}
-                  className="absolute top-3 right-3 p-2 bg-black/60 backdrop-blur-sm rounded-full text-white hover:bg-black/80 transition-all"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            ) : (
-              <label className="block cursor-pointer">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-                <div className="aspect-[16/10] border-2 border-dashed border-white/20 rounded-2xl flex flex-col items-center justify-center gap-3 hover:border-[var(--primary)]/50 hover:bg-white/5 transition-all">
-                  <ImageIcon className="w-12 h-12 text-gray-400" />
-                  <p className="text-gray-400 text-sm">클릭하여 사진을 추가하세요</p>
-                </div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="flex items-center gap-2 text-white font-semibold">
+                <ImageIcon className="w-5 h-5" style={{ color: 'var(--primary)' }} />
+                <span>사진 ({images.length})</span>
               </label>
-            )}
+              {isFetchingPlaceThumbnail && (
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <div className="w-4 h-4 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
+                  <span>장소 이미지 가져오는 중...</span>
+                </div>
+              )}
+            </div>
+
+            {/* Image Grid */}
+            {images.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                {images.map((image) => (
+                  <div key={image.id} className="relative aspect-square rounded-xl overflow-hidden bg-black/20 group">
+                    <img
+                      src={image.url}
+                      alt={image.name || 'Image'}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Image Type Badge */}
+                    {image.type === 'place' && (
+                      <div className="absolute top-2 left-2 px-2 py-1 bg-[var(--primary)]/90 backdrop-blur-sm rounded-lg text-xs text-white font-medium flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        <span>장소</span>
+                      </div>
+                    )}
+                    {/* Remove Button */}
+                    <button
+                      onClick={() => handleRemoveImage(image.id)}
+                      className="absolute top-2 right-2 p-2 bg-black/60 backdrop-blur-sm rounded-full text-white hover:bg-black/80 transition-all opacity-0 group-hover:opacity-100"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {/* Upload Button */}
+            <label className="block cursor-pointer">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <div className={`${images.length > 0 ? 'py-4' : 'aspect-[16/10]'} border-2 border-dashed border-white/20 rounded-2xl flex flex-col items-center justify-center gap-3 hover:border-[var(--primary)]/50 hover:bg-white/5 transition-all`}>
+                <Plus className="w-8 h-8 text-gray-400" />
+                <p className="text-gray-400 text-sm">
+                  {images.length > 0 ? '사진 추가하기' : '클릭하여 사진을 추가하세요'}
+                </p>
+                {selectedPlace && images.filter(img => img.type === 'place').length === 0 && (
+                  <p className="text-xs text-gray-500">장소 선택 시 자동으로 이미지가 추가됩니다</p>
+                )}
+              </div>
+            </label>
           </div>
 
           {/* Content */}
