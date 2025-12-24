@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, MapPin, Image as ImageIcon, X, Check, Search, Plus } from "lucide-react";
 import { PURPOSE_TAGS, type PurposeTag } from "@/types";
+import { getToken } from "@/lib/api";
 
 interface Place {
   id: string;
@@ -57,13 +58,22 @@ export default function WritePage() {
 
     setIsSearching(true);
     try {
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+      const token = getToken();
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(
-        `/api/v1/external/search?query=${encodeURIComponent(query)}`,
+        `${apiBaseUrl}/api/v1/external/search?query=${encodeURIComponent(query)}`,
         {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers,
         }
       );
 
@@ -74,15 +84,14 @@ export default function WritePage() {
       const data = await response.json();
 
       // API 응답 데이터를 Place 인터페이스에 맞게 매핑
-      // 백엔드 응답 구조에 맞게 수정 필요
-      const places: Place[] = data.results?.map((item: any) => ({
-        id: item.id || item.place_id || String(Math.random()),
-        place_name: item.place_name || item.name || '',
-        address_name: item.address_name || item.address || '',
-        road_address_name: item.road_address_name || item.road_address || '',
-        phone: item.phone || '',
-        category_name: item.category_name || item.category || '',
-      })) || [];
+      const places: Place[] = (data.places || []).map((item: any, index: number) => ({
+        id: item.naver_map_url || `place-${index}`,
+        place_name: item.title || '',
+        address_name: item.address || '',
+        road_address_name: item.road_address || '',
+        phone: item.telephone || '',
+        category_name: item.category || '',
+      }));
 
       setSearchResults(places);
       setShowResults(true);
@@ -107,33 +116,29 @@ export default function WritePage() {
   const fetchPlaceThumbnail = async (place: Place): Promise<string | null> => {
     setIsFetchingPlaceThumbnail(true);
     try {
-      // TODO: 실제 네이버 지도 OG 이미지 가져오기
-      // 1. 장소명으로 네이버 지도 URL 검색
-      // 2. 백엔드 API에 네이버 지도 URL 전달
-      // 3. 백엔드에서 OG 태그 추출하여 이미지 URL 반환
+      // 네이버 지도 URL이 place.id에 저장되어 있음 (API 응답의 naver_map_url)
+      const naverMapUrl = place.id;
 
-      // 실제 구현 예시:
-      // const response = await fetch('/api/place/og-image', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     placeName: place.place_name,
-      //     address: place.address_name
-      //   })
-      // });
-      // const data = await response.json();
-      // return data.imageUrl; // 네이버 지도 OG 이미지 URL
+      // Next.js API Route를 통해 네이버 지도 OG 이미지 추출
+      const response = await fetch('/api/og-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: naverMapUrl
+        })
+      });
 
-      // Mock: Unsplash 랜덤 이미지 사용 (개발 중)
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const mockThumbnails = [
-        'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&q=80',
-        'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80',
-        'https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?w=800&q=80',
-      ];
-      return mockThumbnails[Math.floor(Math.random() * mockThumbnails.length)];
+      if (!response.ok) {
+        throw new Error('OG 이미지 추출 실패');
+      }
+
+      const data = await response.json();
+      return data.imageUrl; // 네이버 지도 OG 이미지 URL
     } catch (error) {
       console.error('네이버 지도 OG 이미지 가져오기 실패:', error);
+      // 실패 시 기본 이미지 또는 null 반환
       return null;
     } finally {
       setIsFetchingPlaceThumbnail(false);
@@ -274,7 +279,7 @@ export default function WritePage() {
   return (
     <div className="min-h-screen" style={{ background: 'var(--gradient-bg)' }}>
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b"
+      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-black/80 border-b"
         style={{ borderColor: 'rgba(230, 138, 46, 0.2)' }}
       >
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -301,7 +306,7 @@ export default function WritePage() {
       <main className="max-w-3xl mx-auto px-4 pt-24 pb-24">
         <div className="space-y-6">
           {/* Place Selection */}
-          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-6 relative overflow-visible">
+          <div className={`backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-6 relative overflow-visible ${showResults ? 'z-[9998]' : ''}`}>
             <label className="flex items-center gap-2 text-white font-semibold mb-3">
               <MapPin className="w-5 h-5" style={{ color: 'var(--primary)' }} />
               <span>어디에 다녀오셨나요? (선택)</span>
@@ -326,7 +331,7 @@ export default function WritePage() {
               </div>
             ) : (
               // 검색 입력
-              <div className="relative" ref={searchRef}>
+              <div className="relative z-[9999]" ref={searchRef}>
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
@@ -346,7 +351,7 @@ export default function WritePage() {
 
                 {/* 검색 결과 드롭다운 */}
                 {showResults && searchResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 backdrop-blur-xl bg-slate-900/95 border border-white/20 rounded-2xl shadow-2xl overflow-hidden z-[100] max-h-80 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-2 backdrop-blur-xl bg-black/95 border border-white/20 rounded-2xl shadow-2xl overflow-hidden z-[9999] max-h-80 overflow-y-auto">
                     {searchResults.map((place) => (
                       <button
                         key={place.id}
@@ -365,7 +370,7 @@ export default function WritePage() {
 
                 {/* 검색 결과 없음 */}
                 {showResults && !isSearching && searchQuery && searchResults.length === 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 backdrop-blur-xl bg-slate-900/95 border border-white/20 rounded-2xl shadow-2xl p-6 text-center z-[100]">
+                  <div className="absolute top-full left-0 right-0 mt-2 backdrop-blur-xl bg-black/95 border border-white/20 rounded-2xl shadow-2xl p-6 text-center z-[9999]">
                     <p className="text-gray-400">검색 결과가 없습니다</p>
                   </div>
                 )}
@@ -390,9 +395,9 @@ export default function WritePage() {
 
             {/* Image Grid */}
             {images.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="flex flex-wrap justify-center gap-3 mb-3">
                 {images.map((image) => (
-                  <div key={image.id} className="relative aspect-square rounded-xl overflow-hidden bg-black/20 group">
+                  <div key={image.id} className="relative w-[calc(50%-0.375rem)] aspect-square rounded-xl overflow-hidden bg-black/20 group">
                     <img
                       src={image.url}
                       alt={image.name || 'Image'}

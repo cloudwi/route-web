@@ -134,7 +134,7 @@ export default function PlaceDetailPage() {
       />
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b" style={{ borderColor: 'rgba(230, 138, 46, 0.2)' }}>
+      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-black/80 border-b" style={{ borderColor: 'rgba(230, 138, 46, 0.2)' }}>
         <div className="max-w-4xl mx-auto px-4 lg:px-8 py-4 flex items-center justify-between">
           <button
             onClick={() => router.back()}

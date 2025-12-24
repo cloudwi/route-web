@@ -11,7 +11,12 @@ function CallbackContent() {
   const { login } = useAuth();
 
   useEffect(() => {
+    let isProcessed = false;
+
     const handleCallback = async () => {
+      if (isProcessed) return;
+      isProcessed = true;
+
       try {
         // URL에서 토큰 또는 인증 코드 가져오기
         const token = searchParams.get("token");
@@ -66,14 +71,15 @@ function CallbackContent() {
     };
 
     handleCallback();
-  }, [searchParams, router, login]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--gradient-bg)' }}>
       <div className="text-center">
-        <Loader2 className="w-12 h-12 text-violet-500 animate-spin mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-white mb-2">로그인 처리 중...</h2>
-        <p className="text-gray-400">잠시만 기다려주세요</p>
+        <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: 'var(--primary)' }} />
+        <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>로그인 처리 중...</h2>
+        <p style={{ color: 'var(--text-secondary)' }}>잠시만 기다려주세요</p>
       </div>
     </div>
   );
@@ -83,8 +89,8 @@ export default function CallbackPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
-          <Loader2 className="w-12 h-12 text-violet-500 animate-spin" />
+        <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--gradient-bg)' }}>
+          <Loader2 className="w-12 h-12 animate-spin" style={{ color: 'var(--primary)' }} />
         </div>
       }
     >

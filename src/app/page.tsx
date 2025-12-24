@@ -168,7 +168,7 @@ function HomeContent() {
 
       {/* Simple Header */}
       <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-lg" style={{ background: 'var(--bg-overlay)' }}>
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="px-6 py-1 flex items-center justify-between">
           {/* Logo */}
           <button
             onClick={() => router.push("/")}
@@ -177,7 +177,7 @@ function HomeContent() {
             <img
               src="/images/logo.png"
               alt="플레이스 로고"
-              className="h-28 w-auto object-contain"
+              className="h-24 w-auto object-contain"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
                 e.currentTarget.nextElementSibling?.classList.remove('hidden');

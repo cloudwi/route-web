@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { isLoggedIn } from "@/lib/api";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   ArrowLeft,
   Settings,
@@ -11,7 +12,8 @@ import {
   MessageSquare,
   Users,
   UserMinus,
-  UserPlus,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { PURPOSE_TAGS, type PurposeTag } from "@/types";
 import CoupleConnection from "@/components/features/couple/CoupleConnection";
@@ -71,6 +73,7 @@ const MOCK_FRIENDS = [
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { theme, toggleTheme } = useTheme();
   const [loggedIn, setLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState<"diaries" | "friends">("diaries");
 
@@ -120,19 +123,39 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen" style={{ background: 'var(--gradient-bg)' }}>
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b" style={{ borderColor: 'rgba(230, 138, 46, 0.2)' }}>
+      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-lg" style={{ background: 'var(--bg-overlay)', borderBottom: '1px solid var(--border-soft)' }}>
         <div className="max-w-4xl mx-auto px-4 lg:px-8 py-4 flex items-center justify-between">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+            className="flex items-center gap-2 transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
           >
             <ArrowLeft className="w-5 h-5" />
             <span className="font-medium">뒤로</span>
           </button>
-          <h1 className="text-lg font-bold text-white">프로필</h1>
-          <button className="p-2 text-gray-400 hover:text-white transition-colors">
-            <Settings className="w-5 h-5" />
-          </button>
+          <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>프로필</h1>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className="p-2 transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+              aria-label="테마 변경"
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+            <button
+              className="p-2 transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -150,73 +173,105 @@ export default function ProfilePage() {
           />
         </div>
 
-        <div className="backdrop-blur-xl border rounded-3xl p-8 mb-6"
+        <div className="backdrop-blur-xl rounded-3xl p-8 mb-6"
           style={{
-            background: 'linear-gradient(135deg, rgba(230, 138, 46, 0.15) 0%, rgba(200, 30, 50, 0.15) 100%)',
-            borderColor: 'rgba(230, 138, 46, 0.3)'
+            background: 'var(--gradient-warm)',
+            border: '1px solid var(--border-soft)',
+            boxShadow: 'var(--shadow-md)'
           }}
         >
           {/* Profile Info */}
           <div className="flex items-start gap-6 mb-6">
             <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold"
-              style={{ background: 'var(--gradient-primary)' }}
+              style={{ background: 'var(--gradient-primary)', boxShadow: 'var(--shadow-md)' }}
             >
               {MOCK_USER.name[0]}
             </div>
             <div className="flex-1">
-              <h2 className="text-2xl font-bold text-white mb-2">{MOCK_USER.name}</h2>
-              <p className="text-gray-300 mb-4">{MOCK_USER.bio}</p>
+              <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>{MOCK_USER.name}</h2>
+              <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>{MOCK_USER.bio}</p>
               <div className="flex items-center gap-6">
                 <button
                   onClick={() => setActiveTab("diaries")}
                   className="text-center hover:opacity-80 transition-opacity"
                 >
-                  <div className="text-xl font-bold text-white">{MOCK_USER.diaryCount}</div>
-                  <div className="text-sm text-gray-400">일기</div>
+                  <div className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{MOCK_USER.diaryCount}</div>
+                  <div className="text-sm" style={{ color: 'var(--text-tertiary)' }}>일기</div>
                 </button>
                 <button
                   onClick={() => setActiveTab("friends")}
                   className="text-center hover:opacity-80 transition-opacity"
                 >
-                  <div className="text-xl font-bold text-white">{MOCK_USER.friendsCount}</div>
-                  <div className="text-sm text-gray-400">친구</div>
+                  <div className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{MOCK_USER.friendsCount}</div>
+                  <div className="text-sm" style={{ color: 'var(--text-tertiary)' }}>친구</div>
                 </button>
               </div>
             </div>
           </div>
 
           {/* Edit Profile Button */}
-          <button className="w-full px-4 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm border rounded-xl text-white font-medium transition-all"
-            style={{ borderColor: 'rgba(230, 138, 46, 0.3)' }}
+          <button className="w-full px-4 py-3 backdrop-blur-sm rounded-xl font-medium transition-all"
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-medium)',
+              color: 'var(--text-primary)'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-card-hover)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-card)'}
           >
             프로필 수정
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="backdrop-blur-xl bg-white/5 border rounded-xl p-1.5 inline-flex gap-1 mb-6"
-          style={{ borderColor: 'rgba(230, 138, 46, 0.2)' }}
+        <div className="backdrop-blur-xl rounded-xl p-1.5 inline-flex gap-1 mb-6"
+          style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-soft)'
+          }}
         >
           <button
             onClick={() => setActiveTab("diaries")}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === "diaries"
-                ? "text-white"
-                : "text-gray-400 hover:bg-white/10"
-            }`}
-            style={activeTab === "diaries" ? { background: 'var(--gradient-primary)' } : {}}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+            style={activeTab === "diaries" ? {
+              background: 'var(--gradient-primary)',
+              color: '#ffffff'
+            } : {
+              color: 'var(--text-tertiary)'
+            }}
+            onMouseEnter={(e) => {
+              if (activeTab !== "diaries") {
+                e.currentTarget.style.background = 'var(--bg-card-hover)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== "diaries") {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
           >
             <MessageSquare className="w-4 h-4" />
             <span>일기</span>
           </button>
           <button
             onClick={() => setActiveTab("friends")}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === "friends"
-                ? "text-white"
-                : "text-gray-400 hover:bg-white/10"
-            }`}
-            style={activeTab === "friends" ? { background: 'var(--gradient-primary)' } : {}}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+            style={activeTab === "friends" ? {
+              background: 'var(--gradient-primary)',
+              color: '#ffffff'
+            } : {
+              color: 'var(--text-tertiary)'
+            }}
+            onMouseEnter={(e) => {
+              if (activeTab !== "friends") {
+                e.currentTarget.style.background = 'var(--bg-card-hover)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== "friends") {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
           >
             <Users className="w-4 h-4" />
             <span>친구</span>
@@ -229,14 +284,27 @@ export default function ProfilePage() {
             {MOCK_USER_DIARIES.map((diary) => (
               <div
                 key={diary.id}
-                className="backdrop-blur-xl bg-white/5 hover:bg-white/10 border border-white/20 rounded-3xl p-6 transition-all cursor-pointer"
+                className="backdrop-blur-xl rounded-3xl p-6 transition-all cursor-pointer"
+                style={{
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-soft)',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--bg-card-hover)';
+                  e.currentTarget.style.borderColor = 'var(--border-medium)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--bg-card)';
+                  e.currentTarget.style.borderColor = 'var(--border-soft)';
+                }}
               >
                 <div className="flex items-center gap-2 mb-3">
                   <MapPin className="w-4 h-4" style={{ color: 'var(--primary)' }} />
-                  <h3 className="font-bold text-white">{diary.placeName}</h3>
+                  <h3 className="font-bold" style={{ color: 'var(--text-primary)' }}>{diary.placeName}</h3>
                 </div>
 
-                <p className="text-gray-300 mb-3">{diary.content}</p>
+                <p className="mb-3" style={{ color: 'var(--text-secondary)' }}>{diary.content}</p>
 
                 <div className="flex items-center gap-2 mb-4">
                   {diary.purposeTags.map((tag) => {
@@ -252,24 +320,26 @@ export default function ProfilePage() {
                   })}
                 </div>
 
-                <div className="flex items-center gap-4 text-sm pt-4 border-t border-white/10">
+                <div className="flex items-center gap-4 text-sm pt-4" style={{ borderTop: '1px solid var(--border-soft)' }}>
                   <button
-                    className="flex items-center gap-2 text-gray-400 transition-colors"
+                    className="flex items-center gap-2 transition-colors"
+                    style={{ color: 'var(--text-tertiary)' }}
                     onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent)'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgb(156, 163, 175)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
                   >
                     <Heart className="w-4 h-4" />
                     <span>{diary.likesCount}</span>
                   </button>
                   <button
-                    className="flex items-center gap-2 text-gray-400 transition-colors"
+                    className="flex items-center gap-2 transition-colors"
+                    style={{ color: 'var(--text-tertiary)' }}
                     onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgb(156, 163, 175)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
                   >
                     <MessageSquare className="w-4 h-4" />
                     <span>{diary.commentsCount}</span>
                   </button>
-                  <span className="ml-auto text-gray-500">{diary.createdAt}</span>
+                  <span className="ml-auto" style={{ color: 'var(--text-tertiary)' }}>{diary.createdAt}</span>
                 </div>
               </div>
             ))}
@@ -281,21 +351,40 @@ export default function ProfilePage() {
             {MOCK_FRIENDS.map((user) => (
               <div
                 key={user.id}
-                className="backdrop-blur-xl bg-white/5 hover:bg-white/10 border border-white/20 rounded-2xl p-4 flex items-center justify-between transition-all"
+                className="backdrop-blur-xl rounded-2xl p-4 flex items-center justify-between transition-all"
+                style={{
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-soft)',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--bg-card-hover)';
+                  e.currentTarget.style.borderColor = 'var(--border-medium)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--bg-card)';
+                  e.currentTarget.style.borderColor = 'var(--border-soft)';
+                }}
               >
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold"
-                    style={{ background: 'var(--gradient-primary)' }}
+                    style={{ background: 'var(--gradient-primary)', boxShadow: 'var(--shadow-sm)' }}
                   >
                     {user.name[0]}
                   </div>
                   <div>
-                    <h4 className="font-medium text-white">{user.name}</h4>
-                    <p className="text-sm text-gray-400">친구 {user.friends.toLocaleString()}명</p>
+                    <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>{user.name}</h4>
+                    <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>친구 {user.friends.toLocaleString()}명</p>
                   </div>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border rounded-xl text-white font-medium transition-all"
-                  style={{ borderColor: 'rgba(230, 138, 46, 0.3)' }}
+                <button className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all"
+                  style={{
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border-medium)',
+                    color: 'var(--text-primary)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-card-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-card)'}
                 >
                   <UserMinus className="w-4 h-4" />
                   <span>친구</span>

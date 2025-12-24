@@ -68,7 +68,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
       {/* Modal */}
       <div
-        className={`relative backdrop-blur-xl bg-slate-900/95 border rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden ${
+        className={`relative backdrop-blur-xl bg-black/95 border rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden ${
           isAnimatingOut ? "animate-scale-out" : "animate-scale-in"
         }`}
         style={{ borderColor: 'rgba(230, 138, 46, 0.3)' }}
