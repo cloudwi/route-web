@@ -8,7 +8,7 @@ interface ReviewCardProps {
   id: string;
   user: string;
   userId: string;
-  followers: number;
+  friends: number;
   place: string;
   rating: number;
   comment: string;
@@ -16,7 +16,7 @@ interface ReviewCardProps {
   likes: number;
   comments: number;
   time: string;
-  isFollowing: boolean;
+  isFriend: boolean;
   isLiked?: boolean;
   isFeatured?: boolean;
   image?: string;
@@ -29,7 +29,7 @@ export default function ReviewCard({
   id,
   user,
   userId,
-  followers,
+  friends,
   place,
   rating,
   comment,
@@ -37,7 +37,7 @@ export default function ReviewCard({
   likes,
   comments,
   time,
-  isFollowing,
+  isFriend,
   isLiked = false,
   isFeatured = false,
   image,
@@ -58,9 +58,25 @@ export default function ReviewCard({
     <div
       className={`backdrop-blur-xl ${
         isFeatured
-          ? "bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20"
+          ? ""
           : "bg-white/5"
-      } border border-white/10 rounded-3xl overflow-hidden hover:border-white/30 transition-all group cursor-pointer shadow-xl`}
+      } border rounded-3xl overflow-hidden transition-all group cursor-pointer shadow-xl`}
+      style={isFeatured ? {
+        background: 'linear-gradient(135deg, rgba(230, 138, 46, 0.15) 0%, rgba(200, 30, 50, 0.15) 100%)',
+        borderColor: 'rgba(230, 138, 46, 0.3)'
+      } : {
+        borderColor: 'rgba(255, 255, 255, 0.1)'
+      }}
+      onMouseEnter={(e) => {
+        if (!isFeatured) {
+          e.currentTarget.style.borderColor = 'rgba(230, 138, 46, 0.4)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isFeatured) {
+          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+        }
+      }}
     >
       {/* Image Section */}
       {image && (
@@ -76,22 +92,28 @@ export default function ReviewCard({
           {/* Top Info Overlay */}
           <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-violet-400 to-fuchsia-400 rounded-full flex items-center justify-center text-white font-bold border-2 border-white/20">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold border-2 border-white/20"
+                style={{ background: 'var(--gradient-primary)' }}
+              >
                 {user[0]}
               </div>
               <div>
                 <h3 className="font-bold text-white text-sm drop-shadow-lg">{user}</h3>
               </div>
             </div>
-            {!isFollowing && (
+            {!isFriend && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onFollow?.(userId);
                 }}
-                className="text-xs px-3 py-1.5 bg-white/90 backdrop-blur-sm text-gray-900 font-medium rounded-full hover:bg-white transition-colors"
+                className="text-xs px-3 py-1.5 backdrop-blur-sm text-white font-medium rounded-full transition-all"
+                style={{
+                  background: 'var(--gradient-primary)',
+                  boxShadow: '0 2px 8px 0 rgba(230, 138, 46, 0.3)'
+                }}
               >
-                팔로우
+                친구 추가
               </button>
             )}
           </div>
@@ -100,7 +122,13 @@ export default function ReviewCard({
           <div className="absolute bottom-0 left-0 right-0 p-4">
             <button
               onClick={handlePlaceClick}
-              className="flex items-center gap-2 mb-2 text-white hover:text-violet-300 transition-colors"
+              className="flex items-center gap-2 mb-2 text-white transition-colors"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--primary-light)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'white';
+              }}
             >
               <MapPin className="w-5 h-5 drop-shadow-lg" />
               <span className="font-bold text-lg drop-shadow-lg">{place}</span>
@@ -143,16 +171,35 @@ export default function ReviewCard({
                 e.stopPropagation();
                 onLike?.(id);
               }}
-              className="flex items-center gap-2 text-gray-400 hover:text-rose-400 transition-colors"
+              className="flex items-center gap-2 text-gray-400 transition-colors"
+              onMouseEnter={(e) => {
+                if (!isLiked) {
+                  e.currentTarget.style.color = 'var(--accent)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isLiked) {
+                  e.currentTarget.style.color = 'rgb(156, 163, 175)';
+                }
+              }}
             >
               <Heart
                 className={`w-5 h-5 ${
-                  isLiked ? "fill-rose-400 text-rose-400" : ""
+                  isLiked ? "fill-[var(--accent)]" : ""
                 }`}
+                style={isLiked ? { color: 'var(--accent)' } : {}}
               />
               <span className="text-sm font-medium">{likes.toLocaleString()}</span>
             </button>
-            <button className="flex items-center gap-2 text-gray-400 hover:text-violet-400 transition-colors">
+            <button
+              className="flex items-center gap-2 text-gray-400 transition-colors"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'rgb(156, 163, 175)';
+              }}
+            >
               <MessageSquare className="w-5 h-5" />
               <span className="text-sm font-medium">{comments}</span>
             </button>

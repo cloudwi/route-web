@@ -125,7 +125,7 @@ export default function PlaceDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+    <div className="min-h-screen" style={{ background: 'var(--gradient-bg)' }}>
       <ReviewWriteModal
         isOpen={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}
@@ -134,7 +134,7 @@ export default function PlaceDetailPage() {
       />
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-white/10">
+      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b" style={{ borderColor: 'rgba(230, 138, 46, 0.2)' }}>
         <div className="max-w-4xl mx-auto px-4 lg:px-8 py-4 flex items-center justify-between">
           <button
             onClick={() => router.back()}
@@ -156,11 +156,23 @@ export default function PlaceDetailPage() {
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 lg:px-8 pt-24 pb-24">
         {/* Place Info Card */}
-        <div className="backdrop-blur-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 border border-white/20 rounded-3xl p-8 mb-6">
+        <div className="backdrop-blur-xl border rounded-3xl p-8 mb-6"
+          style={{
+            background: 'linear-gradient(135deg, rgba(230, 138, 46, 0.15) 0%, rgba(200, 30, 50, 0.15) 100%)',
+            borderColor: 'rgba(230, 138, 46, 0.3)'
+          }}
+        >
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
               <h2 className="text-3xl font-bold text-white mb-2">{place.name}</h2>
-              <span className="inline-block px-3 py-1 bg-violet-500/20 border border-violet-500/30 rounded-full text-violet-300 text-sm mb-3">
+              <span className="inline-block px-3 py-1 rounded-full text-sm mb-3"
+                style={{
+                  backgroundColor: 'rgba(230, 138, 46, 0.2)',
+                  borderColor: 'rgba(230, 138, 46, 0.3)',
+                  color: 'var(--primary-light)',
+                  border: '1px solid'
+                }}
+              >
                 {place.category}
               </span>
             </div>
@@ -190,19 +202,21 @@ export default function PlaceDetailPage() {
               onClick={handleLike}
               className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-all ${
                 isLiked
-                  ? "bg-rose-500 text-white"
-                  : "bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                  ? "text-white"
+                  : "bg-white/10 hover:bg-white/20 text-white border"
               }`}
+              style={isLiked ? { background: 'var(--accent)' } : { borderColor: 'rgba(230, 138, 46, 0.3)' }}
             >
               <Heart className={`w-5 h-5 ${isLiked ? "fill-white" : ""}`} />
               <span>{isLiked ? "좋아요 취소" : "좋아요"} ({place.likesCount})</span>
             </button>
             <button
               onClick={() => setIsReviewModalOpen(true)}
-              className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium rounded-xl hover:shadow-lg transition-all"
+              className="flex items-center justify-center gap-2 px-4 py-3 text-white font-medium rounded-xl hover:shadow-lg transition-all"
+              style={{ background: 'var(--gradient-primary)' }}
             >
               <MessageSquare className="w-5 h-5" />
-              <span>리뷰 작성</span>
+              <span>일기 작성</span>
             </button>
           </div>
 
@@ -218,7 +232,10 @@ export default function PlaceDetailPage() {
             {place.telephone && (
               <div className="flex items-center gap-3">
                 <Phone className="w-5 h-5 text-gray-400" />
-                <a href={`tel:${place.telephone}`} className="text-white hover:text-violet-300">
+                <a href={`tel:${place.telephone}`} className="text-white transition-colors"
+                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary-light)'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'white'}
+                >
                   {place.telephone}
                 </a>
               </div>
@@ -230,7 +247,10 @@ export default function PlaceDetailPage() {
                   href={place.naverMapUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-violet-300 hover:text-violet-200 flex items-center gap-1"
+                  className="flex items-center gap-1 transition-colors"
+                  style={{ color: 'var(--primary-light)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--primary-light)'}
                 >
                   <span>네이버 지도에서 보기</span>
                   <ExternalLink className="w-4 h-4" />
@@ -243,8 +263,12 @@ export default function PlaceDetailPage() {
         {/* Reviews Section */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-2xl font-bold text-white">리뷰 ({reviews.length})</h3>
-            <button className="text-sm text-violet-400 hover:text-violet-300 transition-colors">
+            <h3 className="text-2xl font-bold text-white">일기 ({reviews.length})</h3>
+            <button className="text-sm transition-colors"
+              style={{ color: 'var(--primary)' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary-light)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--primary)'}
+            >
               최신순
             </button>
           </div>
@@ -258,7 +282,9 @@ export default function PlaceDetailPage() {
                 {/* Reviewer Info */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-violet-400 to-fuchsia-400 rounded-full flex items-center justify-center text-white font-bold">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold"
+                      style={{ background: 'var(--gradient-primary)' }}
+                    >
                       {review.userName?.[0] || "?"}
                     </div>
                     <div>
@@ -302,11 +328,25 @@ export default function PlaceDetailPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-4 pt-4 border-t border-white/10">
-                  <button className="flex items-center gap-2 text-gray-400 hover:text-rose-400 transition-colors">
-                    <Heart className={`w-4 h-4 ${review.isLiked ? "fill-rose-400 text-rose-400" : ""}`} />
+                  <button
+                    className="flex items-center gap-2 text-gray-400 transition-colors"
+                    onMouseEnter={(e) => {
+                      if (!review.isLiked) e.currentTarget.style.color = 'var(--accent)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!review.isLiked) e.currentTarget.style.color = 'rgb(156, 163, 175)';
+                    }}
+                  >
+                    <Heart className={`w-4 h-4 ${review.isLiked ? "fill-[var(--accent)]" : ""}`}
+                      style={review.isLiked ? { color: 'var(--accent)' } : {}}
+                    />
                     <span className="text-sm">{review.likesCount}</span>
                   </button>
-                  <button className="flex items-center gap-2 text-gray-400 hover:text-violet-400 transition-colors">
+                  <button
+                    className="flex items-center gap-2 text-gray-400 transition-colors"
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgb(156, 163, 175)'}
+                  >
                     <MessageSquare className="w-4 h-4" />
                     <span className="text-sm">{review.commentsCount}</span>
                   </button>
@@ -320,7 +360,11 @@ export default function PlaceDetailPage() {
       {/* Floating Review Button */}
       <button
         onClick={() => setIsReviewModalOpen(true)}
-        className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full flex items-center justify-center shadow-2xl hover:shadow-violet-500/50 hover:scale-110 transition-all z-50"
+        className="fixed bottom-8 right-8 w-16 h-16 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all z-50"
+        style={{
+          background: 'var(--gradient-primary)',
+          boxShadow: '0 8px 32px 0 rgba(230, 138, 46, 0.4)'
+        }}
       >
         <MessageSquare className="w-6 h-6 text-white" />
       </button>

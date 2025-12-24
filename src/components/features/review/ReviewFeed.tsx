@@ -8,7 +8,7 @@ interface Review {
   id: string;
   user: string;
   userId: string;
-  followers: number;
+  friends: number;
   place: string;
   rating: number;
   comment: string;
@@ -16,7 +16,7 @@ interface Review {
   likes: number;
   comments: number;
   time: string;
-  isFollowing: boolean;
+  isFriend: boolean;
   isLiked?: boolean;
   image?: string;
 }
@@ -37,7 +37,7 @@ export default function ReviewFeed({
   if (reviews.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-400">아직 리뷰가 없습니다.</p>
+        <p className="text-gray-400">아직 일기가 없습니다.</p>
       </div>
     );
   }

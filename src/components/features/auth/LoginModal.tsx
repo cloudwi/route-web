@@ -68,14 +68,15 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
       {/* Modal */}
       <div
-        className={`relative bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden ${
+        className={`relative backdrop-blur-xl bg-slate-900/95 border rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden ${
           isAnimatingOut ? "animate-scale-out" : "animate-scale-in"
         }`}
+        style={{ borderColor: 'rgba(230, 138, 46, 0.3)' }}
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-10"
+          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors z-10"
         >
           <X className="w-5 h-5" />
         </button>
@@ -95,15 +96,15 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 if (fallback) fallback.style.display = 'flex';
               }}
             />
-            <div className="hidden w-16 h-16 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-2xl items-center justify-center shadow-lg">
+            <div className="hidden w-16 h-16 rounded-2xl items-center justify-center shadow-lg" style={{ background: 'var(--gradient-primary)' }}>
               <MapPin className="w-8 h-8 text-white" />
             </div>
           </div>
 
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
+          <h2 className="text-xl font-bold text-white mb-2">
             플레이스에 로그인하기
           </h2>
-          <p className="text-gray-500 text-sm mb-8">
+          <p className="text-gray-400 text-sm mb-8">
             다양한 장소를 공유하고<br />
             솔직한 리뷰를 나눠보세요
           </p>
@@ -120,11 +121,11 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           </button>
 
           {/* Terms */}
-          <p className="mt-6 text-xs text-gray-400">
+          <p className="mt-6 text-xs text-gray-500">
             로그인 시{" "}
-            <span className="text-gray-500 underline cursor-pointer">이용약관</span>
+            <span className="text-gray-400 underline cursor-pointer hover:text-gray-300">이용약관</span>
             {" "}및{" "}
-            <span className="text-gray-500 underline cursor-pointer">개인정보처리방침</span>
+            <span className="text-gray-400 underline cursor-pointer hover:text-gray-300">개인정보처리방침</span>
             에 동의합니다
           </p>
         </div>
